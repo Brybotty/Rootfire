@@ -1,0 +1,180 @@
+<section id="menu" class="relative pb-20 pt-16 sm:pt-24" aria-labelledby="titulo-menu">
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <header appRevelar class="relative flex flex-wrap items-end justify-between gap-6">
+      <app-sticker nombre="hamburguesa-capas" [giro]="8" class="absolute right-1 top-0 h-20 sm:-top-6 sm:h-28" />
+      <div>
+        <p class="rotulo" data-num="01">La carta</p>
+        <h2 id="titulo-menu" class="titulo-seccion mt-4">El menú</h2>
+        <p class="mt-3 max-w-md text-[15px] leading-relaxed text-papel-300">
+          @if (pedido.activo) {
+            Toca una hamburguesa para ver sus ingredientes y armar tu pedido: te lo recibimos por WhatsApp. Precios en pesos colombianos.
+          } @else {
+            Toca un plato para ver ingredientes, alérgenos y adicionales. Precios en pesos colombianos.
+          }
+        </p>
+      </div>
+      <button type="button" class="boton-linea no-imprimir hidden sm:inline-flex" (click)="imprimir()">
+        <app-icono nombre="imprimir" class="h-5 w-5 text-destello-400" />
+        Imprimir o guardar PDF
+      </button>
+    </header>
+
+    @if (menu.hayEjemplos()) {
+      <div class="mt-7 flex gap-3 rounded-2xl border border-dashed border-destello-400/40 bg-destello-400/[0.06] p-4 text-sm leading-relaxed text-papel-200" role="note">
+        <app-icono nombre="alerta" class="mt-0.5 h-5 w-5 text-destello-400" />
+        <p>
+          <strong class="text-papel-50">Menú de demostración.</strong>
+          Los platos marcados como «Ejemplo» y sus precios son provisionales mientras llega la carta real.
+        </p>
+      </div>
+    }
+
+    @if (!menu.filtrando() && menu.destacados().length) {
+      <app-destacados class="mt-10 sm:mt-12" />
+    }
+  </div>
+
+  <!-- Buscador y filtros -->
+  <div class="mx-auto mt-12 max-w-7xl px-4 sm:px-6 lg:px-8">
+    <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:gap-4">
+      <label class="relative block lg:w-[22rem] lg:shrink-0">
+        <span class="sr-only">Buscar en el menú</span>
+        <app-icono nombre="buscar" class="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-papel-300" />
+        <input #buscador id="buscador" type="search" inputmode="search" enterkeyhint="search" autocomplete="off" spellcheck="false"
+               placeholder="Busca un plato o ingrediente"
+               class="h-12 w-full appearance-none rounded-full border border-papel-100/15 bg-fondo-900/80 pl-12 pr-12 text-[15px] text-papel-50 transition placeholder:text-papel-400 focus:border-destello-400/70 focus:outline-none focus:ring-2 focus:ring-destello-400/30 [&::-webkit-search-cancel-button]:hidden"
+               [value]="menu.filtros().texto" (input)="buscar($any($event.target).value)" (keydown.escape)="limpiarBusqueda()" />
+        @if (menu.filtros().texto) {
+          <button type="button" class="absolute right-1 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full text-papel-300 transition hover:bg-white/5 hover:text-papel-50"
+                  aria-label="Borrar búsqueda" (click)="limpiarBusqueda()">
+            <app-icono nombre="cerrar" class="h-5 w-5" />
+          </button>
+        }
+      </label>
+
+      <div class="scrollbar-oculta -mx-4 flex gap-2 overflow-x-auto px-4 py-1 sm:-mx-6 sm:px-6 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0" role="group" aria-label="Filtros">
+        @if (menu.dietas().vegetariano) {
+          <button type="button" class="chip" [attr.aria-pressed]="menu.filtros().vegetariano" (click)="menu.alternar('vegetariano')">
+            <app-icono nombre="hoja" class="h-4 w-4" />
+            Vegetariano
+          </button>
+        }
+        @if (menu.dietas().picante) {
+          <button type="button" class="chip" [attr.aria-pressed]="menu.filtros().picante" (click)="menu.alternar('picante')">
+            <app-icono nombre="chile" class="h-4 w-4" />
+            Picante
+          </button>
+        }
+        @if (menu.dietas().sinGluten) {
+          <button type="button" class="chip" [attr.aria-pressed]="menu.filtros().sinGluten" (click)="menu.alternar('sinGluten')">
+            <app-icono nombre="sin-gluten" class="h-4 w-4" />
+            Sin gluten
+          </button>
+        }
+        @if (menu.rangos().length) {
+          @if (menu.hayDietas()) {
+            <span class="mx-1 w-px shrink-0 self-stretch bg-papel-100/15" aria-hidden="true"></span>
+          }
+          @for (rango of menu.rangos(); track rango.id) {
+            <button type="button" class="chip cifras" [attr.aria-pressed]="menu.filtros().precio === rango.id" (click)="menu.elegirPrecio(rango.id)">
+              {{ rango.etiqueta }}
+            </button>
+          }
+        }
+      </div>
+    </div>
+
+    <div class="mt-2 flex min-h-11 items-center justify-between gap-3 text-sm" aria-live="polite">
+      <p class="text-papel-300">
+        @if (menu.filtrando()) {
+          <strong class="text-papel-50">{{ resumen() }}</strong> con tu búsqueda
+        } @else {
+          {{ resumen() }} en la carta
+        }
+      </p>
+      @if (menu.filtrando()) {
+        <button type="button" class="enlace-toque font-bold text-destello-400 transition hover:text-destello-300" (click)="menu.limpiar()">
+          <app-icono nombre="cerrar" [grosor]="2.2" class="h-4 w-4" />
+          Limpiar filtros
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Barra pegajosa de categorías -->
+  <nav class="no-imprimir sticky top-[var(--alto-barra)] z-30 mt-1 border-y border-papel-100/10 bg-fondo-950/90 backdrop-blur-xl" aria-label="Categorías del menú">
+    <div #barra class="scrollbar-oculta mx-auto flex h-[var(--alto-categorias)] max-w-7xl items-center gap-2 overflow-x-auto px-4 sm:px-6 lg:px-8">
+      @for (g of menu.grupos(); track g.categoria.id) {
+        <button type="button" class="chip" [class.activo]="activa() === g.categoria.id" [attr.aria-current]="activa() === g.categoria.id ? 'true' : null"
+                [attr.data-categoria]="g.categoria.id" (click)="irA(g.categoria.id)">
+          <app-icono [nombre]="iconos[g.categoria.icono]" class="h-[18px] w-[18px]" />
+          {{ g.categoria.nombre }}
+          <span class="cifras text-xs opacity-60">{{ g.platos.length }}</span>
+        </button>
+      }
+    </div>
+  </nav>
+
+  <!-- Platos por categoría -->
+  <div #lista class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    @for (g of menu.grupos(); track g.categoria.id) {
+      <section class="pt-10 sm:pt-14" [id]="'cat-' + g.categoria.id" [attr.data-seccion]="g.categoria.id" [attr.aria-labelledby]="'titulo-' + g.categoria.id">
+        <!-- En las listas con rótulo el título visible va dentro del panel (como en la carta impresa): aquí queda para lectores de pantalla. -->
+        <header class="mb-5 flex items-center gap-4" [class.sr-only]="tituloEnPanel(g.categoria)">
+          <span class="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primario-500/15 text-primario-400">
+            <app-icono [nombre]="iconos[g.categoria.icono]" class="h-7 w-7" />
+          </span>
+          <div class="min-w-0">
+            <h3 [id]="'titulo-' + g.categoria.id" class="font-display text-[2rem] font-extrabold uppercase leading-none text-papel-50 sm:text-[2.4rem]">
+              {{ g.categoria.nombre }}
+            </h3>
+            @if (g.categoria.descripcion) {
+              <p class="mt-1 text-sm text-papel-300">{{ g.categoria.descripcion }}</p>
+            }
+          </div>
+          <span class="ml-2 hidden h-px flex-1 bg-gradient-to-r from-papel-100/15 to-transparent sm:block" aria-hidden="true"></span>
+        </header>
+        @if (tieneCombo(g.platos) && menu.notaCombo()) {
+          <p class="-mt-1 mb-6 flex items-start gap-2.5 rounded-2xl border border-destello-400/25 bg-destello-400/[0.07] px-4 py-3 text-sm leading-snug text-papel-100">
+            <app-icono nombre="combo" class="h-5 w-5 text-destello-400" />
+            <span>{{ menu.notaCombo() }}</span>
+          </p>
+        }
+        @switch (g.categoria.estilo) {
+          @case ('cartel') {
+            <ul class="flex flex-wrap justify-center gap-x-6 gap-y-3">
+              @for (plato of g.platos; track plato.id) {
+                <li class="w-full sm:w-[calc(50%-0.75rem)] lg:w-[calc(33.333%-1rem)]">
+                  <app-plato-cartel [plato]="plato" />
+                </li>
+              }
+            </ul>
+          }
+          @case ('lista') {
+            <app-lista-platos [categoria]="g.categoria" [platos]="g.platos" />
+          }
+          @default {
+            <ul class="grid gap-3 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
+              @for (plato of g.platos; track plato.id) {
+                <li class="h-full">
+                  @if (g.categoria.estilo === 'combo') {
+                    <app-combo-tarjeta [plato]="plato" />
+                  } @else {
+                    <app-plato-tarjeta [plato]="plato" [icono]="g.categoria.icono" />
+                  }
+                </li>
+              }
+            </ul>
+          }
+        }
+      </section>
+    } @empty {
+      <div class="mx-auto flex max-w-sm flex-col items-center py-16 text-center">
+        <app-sticker nombre="mascota-pensando" class="h-36" />
+        <p class="mt-5 font-display text-3xl font-extrabold uppercase leading-none text-papel-50">Nada por aquí</p>
+        <p class="mt-2 text-papel-300">No encontramos platos con esa búsqueda. Prueba con otra palabra o quita algún filtro.</p>
+        <button type="button" class="boton-fuego mt-6" (click)="menu.limpiar()">Ver todo el menú</button>
+      </div>
+    }
+  </div>
+</section>

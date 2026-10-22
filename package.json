@@ -1,0 +1,60 @@
+{
+  "name": "rootfire-burgers",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "preparar": "node scripts/preparar.mjs",
+    "start": "npm run preparar && ng serve --port 4201",
+    "build": "npm run preparar && ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test --watch=false --browsers=ChromeHeadless",
+    "test:watch": "ng test",
+    "marca": "node scripts/marca.mjs",
+    "nombres": "node scripts/nombres.mjs",
+    "promo": "node scripts/promo.mjs",
+    "qr": "node scripts/qr.mjs",
+    "revisar": "node scripts/revisar.mjs",
+    "safari": "node scripts/safari.mjs"
+  },
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "overrides": [
+      {
+        "files": "*.html",
+        "options": {
+          "parser": "angular"
+        }
+      }
+    ]
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "^20.2.0",
+    "@angular/compiler": "^20.2.0",
+    "@angular/core": "^20.2.0",
+    "@angular/platform-browser": "^20.2.0",
+    "@angular/service-worker": "^20.2.0",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0"
+  },
+  "devDependencies": {
+    "@angular/build": "^20.2.1",
+    "@angular/cli": "^20.2.1",
+    "@angular/compiler-cli": "^20.2.0",
+    "@types/jasmine": "~5.1.0",
+    "jasmine-core": "~5.9.0",
+    "karma": "~6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "playwright-webkit": "1.33.0",
+    "postcss": "^8.5.28",
+    "puppeteer-core": "^25.12.0",
+    "qrcode": "^1.5.4",
+    "tailwindcss": "^3.4.19",
+    "typescript": "~5.9.2"
+  },
+  "type": "module"
+}

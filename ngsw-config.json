@@ -1,0 +1,21 @@
+{
+  "$schema": "./node_modules/@angular/service-worker/config/schema.json",
+  "index": "/index.html",
+  "assetGroups": [
+    {
+      "name": "app",
+      "installMode": "prefetch",
+      "resources": {
+        "files": ["/index.html", "/manifest.webmanifest", "/favicon.svg", "/favicon.ico", "/*.css", "/*.js", "/fonts/*.woff2"]
+      }
+    },
+    {
+      "name": "imagenes",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": ["/**/*.(svg|jpg|jpeg|png|webp|avif|gif|ico)"]
+      }
+    }
+  ]
+}

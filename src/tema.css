@@ -1,0 +1,82 @@
+/* Generado por scripts/preparar.mjs desde src/app/config/clientes/rootfire.ts. No editar a mano. */
+@font-face {
+  font-family: 'Bricolage Condensada';
+  src: url('/fonts/bricolage-condensada.woff2') format('woff2');
+  font-weight: 600 800;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Figtree';
+  src: url('/fonts/figtree.woff2') format('woff2');
+  font-weight: 300 900;
+  font-style: normal;
+  font-display: swap;
+}
+:root {
+  --fondo-100: 234 223 209;
+  --fondo-200: 212 195 176;
+  --fondo-300: 179 158 138;
+  --fondo-400: 140 117 98;
+  --fondo-500: 100 80 63;
+  --fondo-600: 68 52 40;
+  --fondo-700: 46 34 26;
+  --fondo-800: 33 24 18;
+  --fondo-900: 23 16 12;
+  --fondo-950: 14 9 7;
+  --papel-50: 255 248 238;
+  --papel-100: 250 230 203;
+  --papel-200: 242 213 174;
+  --papel-300: 227 189 138;
+  --papel-400: 207 160 102;
+  --papel-500: 173 127 69;
+  --papel-600: 135 98 52;
+  --papel-700: 97 70 39;
+  --papel-800: 64 47 27;
+  --papel-900: 37 27 16;
+  --primario-100: 255 225 222;
+  --primario-200: 255 186 180;
+  --primario-300: 255 138 128;
+  --primario-400: 242 73 63;
+  --primario-500: 209 24 19;
+  --primario-600: 176 19 15;
+  --primario-700: 138 16 13;
+  --primario-800: 101 14 11;
+  --primario-900: 64 10 8;
+  --secundario-100: 255 231 214;
+  --secundario-200: 255 201 163;
+  --secundario-300: 255 163 102;
+  --secundario-400: 255 129 54;
+  --secundario-500: 255 96 6;
+  --secundario-600: 217 76 0;
+  --secundario-700: 168 59 0;
+  --secundario-800: 122 44 4;
+  --secundario-900: 77 29 6;
+  --destello-100: 255 246 209;
+  --destello-200: 255 234 153;
+  --destello-300: 255 219 87;
+  --destello-400: 255 203 0;
+  --destello-500: 230 180 0;
+  --destello-600: 191 149 0;
+  --destello-700: 143 111 0;
+  --destello-800: 102 80 0;
+  --destello-900: 64 50 0;
+  --fresco-100: 241 248 214;
+  --fresco-200: 221 238 163;
+  --fresco-300: 195 224 98;
+  --fresco-400: 166 209 31;
+  --fresco-500: 140 189 0;
+  --fresco-600: 111 150 0;
+  --fresco-700: 84 113 0;
+  --fresco-800: 59 80 0;
+  --fresco-900: 37 51 0;
+  --sobre-destello: 14 9 7;
+  --sobre-primario: 255 255 255;
+  --fuente-display: 'Bricolage Condensada', "Arial Narrow", "Roboto Condensed", Impact, sans-serif;
+  --fuente-texto: 'Figtree', system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.tono-verde { --tono-fondo: #8CBD00; --tono-titulo: #005225; --tono-texto: #063B1B; --tono-acento: #003A1A; }
+.tono-amarillo { --tono-fondo: #FFCB00; --tono-titulo: #D11813; --tono-texto: #8A100D; --tono-acento: #A3120E; }
+.tono-naranja { --tono-fondo: #F25A04; --tono-titulo: #FFF8EE; --tono-texto: #FFF8EE; --tono-acento: #FFF8EE; }
+.tono-rojo { --tono-fondo: #D11813; --tono-titulo: #FFCB00; --tono-texto: #FFCB00; --tono-acento: #FFCB00; }
+.tono-verde-oscuro { --tono-fondo: #005225; --tono-titulo: #A6D11F; --tono-texto: #FAE6CB; --tono-acento: #A6D11F; }
