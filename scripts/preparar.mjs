@@ -185,10 +185,11 @@ const manifiesto = {
 escribir('public/manifest.webmanifest', `${JSON.stringify(manifiesto, null, 2)}\n`);
 
 // ——— robots.txt y sitemap.xml ———
-escribir('public/robots.txt', `User-agent: *\nAllow: /\n\nSitemap: ${url}/sitemap.xml\n`);
+// El panel y la cuenta no tienen nada que buscar en Google.
+escribir('public/robots.txt', `User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /cuenta\n\nSitemap: ${url}/sitemap.xml\n`);
 escribir(
   'public/sitemap.xml',
-  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${url}/</loc></url>\n</urlset>\n`,
+  `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${['/', '/politica-de-datos', '/terminos'].map((ruta) => `  <url><loc>${url}${ruta}</loc></url>`).join('\n')}\n</urlset>\n`,
 );
 
 const ejemplos = MENU.platos.filter((p) => p.ejemplo).length;

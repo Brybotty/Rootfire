@@ -100,7 +100,33 @@ export const ROOTFIRE: ConfigCliente = {
     { red: 'tiktok', usuario: 'rootfire.burgers', url: 'https://www.tiktok.com/@rootfire.burgers' },
   ],
   firma: { etiqueta: 'Diseño y desarrollo', nombre: 'ProjectRyann' },
-  firebase: { projectId: 'rootfire-burgers' },
+  // Valores sugeridos y apagados: el Club no se anuncia hasta que el admin lo encienda (Admin → Club) con las
+  // condiciones que decida el negocio.
+  club: {
+    activo: false,
+    nombre: 'Club Rootfire',
+    descuento: { activo: true, porcentaje: 10, soloPrimerPedido: true, minimo: 0 },
+    sellos: { activo: true, meta: 8, premio: 'Una hamburguesa La Clásica sola' },
+  },
+  // TODO: pedir al cliente razón social, NIT y un correo para datos personales. Mientras tanto las políticas
+  // usan el nombre comercial, la dirección y el WhatsApp.
+  legal: {
+    razonSocial: undefined,
+    nit: undefined,
+    correo: undefined,
+    vigenteDesde: '22 de octubre de 2026',
+    version: '2026-10-22',
+  },
+  // La misma cuenta dueña del panel de El Acicale. Debe coincidir con esCorreoAdmin() en firestore.rules y storage.rules.
+  adminEmail: 'ortizgonzalesbryanalexander1@gmail.com',
+  // TODO: configuración web (Firebase → Configuración del proyecto → Tus apps → app web): apiKey, appId y
+  // messagingSenderId. Sin `apiKey` la página sigue con el menú de config/menu.ts y no hay Club ni panel.
+  // authDomain es el mismo dominio de Hosting: así la ventana de Google abre desde rootfire-burgers.web.app.
+  firebase: {
+    projectId: 'rootfire-burgers',
+    authDomain: 'rootfire-burgers.web.app',
+    storageBucket: 'rootfire-burgers.firebasestorage.app',
+  },
   tema: {
     // Base oscura (carbón cálido) con la paleta oficial de la marca encima:
     // amarillo #FFCB00, naranja #FF6006, rojo #D11813, verde #8CBD00, verde oscuro #005225 y crema #FAE6CB.

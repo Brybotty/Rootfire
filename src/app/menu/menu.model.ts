@@ -1,6 +1,6 @@
 /**
- * Modelo del menú. Son objetos planos (solo textos, números y listas) para poder guardarlos tal cual
- * en Firestore más adelante: una colección `categorias` y otra `platos` con `categoriaId`.
+ * Modelo del menú. Son objetos planos (solo textos, números y listas): el menú entero se guarda tal cual en
+ * Firestore (`publico/carta`, ver carta/carta.ts) y el admin lo cambia desde el panel.
  * Lo leen también los scripts de Node: usa solo `import type`.
  */
 
@@ -97,6 +97,8 @@ export interface Plato {
   /** Solo si el negocio los confirma. */
   alergenos?: string[];
   adicionales?: Adicional[];
+  /** Muestra en su detalle los productos de la categoría `Menu.adicionesDe` (con sus precios de siempre). */
+  conAdiciones?: boolean;
   /** Combos: lo que trae. */
   incluye?: string[];
   estado?: 'disponible' | 'agotado';
@@ -112,6 +114,8 @@ export interface Plato {
   ilustracion?: Ilustracion;
   /** Plato de ejemplo para la demo: se marca en la página y no va a los datos para Google. */
   ejemplo?: boolean;
+  /** Guardado pero fuera de la carta (un plato de temporada que vuelve, por ejemplo). */
+  oculto?: boolean;
 }
 
 export interface Menu {
@@ -122,6 +126,11 @@ export interface Menu {
   notaCombo?: string;
   /** Acompañamientos entre los que se elige al pedir en combo (el primero es el que sale marcado). */
   acompanamientosCombo?: string[];
+  /**
+   * Categoría cuyos productos se ofrecen como adiciones en el detalle de los platos con `conAdiciones`. Así el
+   * precio de una adición se cambia en un solo sitio.
+   */
+  adicionesDe?: string;
   categorias: Categoria[];
   platos: Plato[];
 }

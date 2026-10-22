@@ -1,5 +1,6 @@
-import { Injectable, computed, signal } from '@angular/core';
-import { MENU } from '../config/menu';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { menuParaVer } from '../carta/carta';
+import { CartaService } from '../carta/carta.service';
 import {
   FILTROS_VACIOS,
   type Filtros,
@@ -17,12 +18,13 @@ import type { Categoria, Menu, Plato } from './menu.model';
 
 /**
  * Estado del menú: la carta, la búsqueda y los filtros (todo con signals, sin esperas).
- * Hoy la carta sale de config/menu.ts. Para pasarla a Firestore basta con llenar `menu` desde allá
- * (por ejemplo con onSnapshot de `categorias` y `platos`): todo lo demás se recalcula solo.
+ * El menú sale de la carta (CartaService: Firestore, su copia o config/menu.ts); cuando el admin lo cambia,
+ * todo lo demás se recalcula solo.
  */
 @Injectable({ providedIn: 'root' })
 export class MenuService {
-  readonly menu = signal<Menu>(MENU);
+  private readonly cartas = inject(CartaService);
+  readonly menu = computed<Menu>(() => menuParaVer(this.cartas.carta().menu));
 
   readonly categorias = computed(() => [...this.menu().categorias].sort((a, b) => a.orden - b.orden));
   readonly platos = computed(() => ordenarPlatos(this.menu().platos, this.categorias()));

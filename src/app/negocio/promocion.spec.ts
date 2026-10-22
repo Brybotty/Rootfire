@@ -21,15 +21,27 @@ describe('promoción del mes', () => {
   });
 
   it('vale desde el primer día hasta el último, ambos incluidos', () => {
-    expect(promoVigente(PROMO, colombia('2026-10-01T00:00'))).toBe(PROMO);
-    expect(promoVigente(PROMO, colombia('2026-10-08T20:00'))).toBe(PROMO);
-    expect(promoVigente(PROMO, colombia('2026-10-31T23:59'))).toBe(PROMO);
+    expect(promoVigente([PROMO], colombia('2026-10-01T00:00'))).toBe(PROMO);
+    expect(promoVigente([PROMO], colombia('2026-10-08T20:00'))).toBe(PROMO);
+    expect(promoVigente([PROMO], colombia('2026-10-31T23:59'))).toBe(PROMO);
   });
 
   it('antes y después de sus fechas no sale', () => {
-    expect(promoVigente(PROMO, colombia('2026-09-30T23:59'))).toBeNull();
-    expect(promoVigente(PROMO, colombia('2026-11-01T00:00'))).toBeNull();
-    expect(promoVigente(undefined, colombia('2026-10-08T20:00'))).toBeNull();
+    expect(promoVigente([PROMO], colombia('2026-09-30T23:59'))).toBeNull();
+    expect(promoVigente([PROMO], colombia('2026-11-01T00:00'))).toBeNull();
+    expect(promoVigente([], colombia('2026-10-08T20:00'))).toBeNull();
+  });
+
+  it('apagada no sale, aunque esté en fechas', () => {
+    expect(promoVigente([{ ...PROMO, activa: false }], colombia('2026-10-08T20:00'))).toBeNull();
+  });
+
+  it('con varias programadas sale la primera que esté en fechas', () => {
+    const navidad: Promocion = { ...PROMO, id: 'navidad-2026', vigencia: { desde: '2026-12-01', hasta: '2026-12-31' } };
+    const lista = [navidad, PROMO];
+    expect(promoVigente(lista, colombia('2026-10-08T20:00'))).toBe(PROMO);
+    expect(promoVigente(lista, colombia('2026-12-24T20:00'))).toBe(navidad);
+    expect(promoVigente(lista, colombia('2026-11-15T20:00'))).toBeNull();
   });
 
   it('la marca de "ya la vio" cambia cada día y con cada promo', () => {
