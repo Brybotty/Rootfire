@@ -1,7 +1,6 @@
-import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { IconoComponent } from '../compartido/icono.component';
 import { CLIENTE } from '../config/cliente';
-import { ConsentimientoService } from '../legal/consentimiento.service';
 import { LogotipoComponent } from '../marca/logotipo.component';
 import { MascotaComponent } from '../marca/mascota.component';
 
@@ -34,7 +33,7 @@ import { MascotaComponent } from '../marca/mascota.component';
         <a href="/politica-de-datos" class="enlace-toque text-papel-200 hover:text-destello-300" [attr.aria-current]="actual() === 'politica' ? 'page' : null">Política de datos</a>
         <a href="/terminos" class="enlace-toque text-papel-200 hover:text-destello-300" [attr.aria-current]="actual() === 'terminos' ? 'page' : null">Términos y condiciones</a>
         <a href="/cuenta" class="enlace-toque text-papel-200 hover:text-destello-300" [attr.aria-current]="actual() === 'cuenta' ? 'page' : null">Mi cuenta</a>
-        <button type="button" class="enlace-toque text-papel-200 hover:text-destello-300" (click)="consentimiento.abrirPreferencias()">Preferencias de cookies</button>
+        <a href="/politica-de-datos#cookies" class="enlace-toque text-papel-200 hover:text-destello-300">Cookies</a>
         <p class="w-full pt-3 text-papel-400 sm:ml-auto sm:w-auto sm:pt-0">© {{ anio }} {{ c.nombre }}</p>
       </nav>
     </footer>
@@ -43,7 +42,6 @@ import { MascotaComponent } from '../marca/mascota.component';
 export class PaginaComponent {
   /** Página en la que se está (marca su enlace del pie). */
   actual = input<'politica' | 'terminos' | 'cuenta' | null>(null);
-  protected readonly consentimiento = inject(ConsentimientoService);
   protected readonly c = CLIENTE;
   readonly anio = new Date().getFullYear();
 }

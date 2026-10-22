@@ -17,7 +17,7 @@ const { ROTULOS } = await import('../src/app/marca/nombres.ts');
 const { promoVigente } = await import('../src/app/negocio/promocion.ts');
 const PROMO = promoVigente(CLIENTE.promocion ? [CLIENTE.promocion] : []);
 const CLAVE_PROMO = `${CLIENTE.id}:promo`;
-// La del aviso de cookies (legal/consentimiento.service.ts).
+// La del aviso de cookies (legal/aviso-cookies.component.ts).
 const CLAVE_COOKIES = `${CLIENTE.id}:cookies-v1`;
 const CLAVE_PEDIDO = `${CLIENTE.id}:pedido`;
 const PEDIDOS = CLIENTE.contacto.whatsapp.activo && !!CLIENTE.contacto.whatsapp.pedidos;
@@ -90,10 +90,10 @@ async function abrir(navegador, ancho, { ruta = '/', movil = ancho < 1024, cooki
   });
   // La ventana de la promo sale sola una vez al día: aquí se marca como vista para que no tape lo que se revisa
   // (tiene su propio bloque de pruebas más abajo). La marca es la de promocion.ts: id de la promo y fecha de Colombia.
-  // Igual con el aviso de cookies: se revisa como quien ya aceptó (el aviso tiene su propio bloque más abajo).
-  // (Las páginas comparten el almacenamiento del navegador: sin `cookies` se borra la elección de antes.)
+  // Igual con el aviso de cookies: se revisa como quien ya lo cerró (el aviso tiene su propio bloque más abajo).
+  // (Las páginas comparten el almacenamiento del navegador: sin `cookies` se borra la marca de antes.)
   await pagina.evaluateOnNewDocument(
-    (clave, aceptadas) => (aceptadas ? localStorage.setItem(clave, JSON.stringify({ mapa: true, fecha: new Date().toISOString() })) : localStorage.removeItem(clave)),
+    (clave, visto) => (visto ? localStorage.setItem(clave, JSON.stringify({ fecha: new Date().toISOString() })) : localStorage.removeItem(clave)),
     CLAVE_COOKIES,
     cookies,
   );
@@ -398,20 +398,19 @@ for (const ancho of [390, 1440]) {
   await pagina.close();
 }
 
-// ——— Aviso de cookies: sale a quien llega por primera vez; sin permiso no se carga el mapa de Google ———
+// ——— Aviso de cookies: sale a quien llega por primera vez y "Entendido" lo cierra; el mapa carga igual ———
 {
   const pagina = await abrir(navegador, 390, { cookies: false });
-  prueba('cookies: el aviso sale a quien llega por primera vez', await pagina.evaluate(() => !!document.querySelector('.aviso-cookies')));
-  await pagina.screenshot({ path: join(SALIDA, '390-cookies.png') });
-  await pagina.evaluate(() => [...document.querySelectorAll('.aviso-cookies button')].find((b) => b.textContent.includes('Solo las necesarias')).click());
   await pagina.evaluate(() => document.getElementById('visitanos').scrollIntoView({ behavior: 'instant' }));
-  await esperar(1500);
-  const sinMapa = await pagina.evaluate(() => ({
-    aviso: !!document.querySelector('.aviso-cookies'),
-    iframe: !!document.querySelector('#visitanos iframe'),
-    boton: [...document.querySelectorAll('#visitanos button')].some((b) => b.textContent.includes('Ver el mapa aquí')),
-  }));
-  prueba('cookies: "Solo las necesarias" quita el aviso y el mapa de Google no carga (sale el botón para verlo)', !sinMapa.aviso && !sinMapa.iframe && sinMapa.boton, JSON.stringify(sinMapa));
+  await pagina.waitForSelector('#visitanos iframe', { timeout: 15000 }).catch(() => {});
+  const antes = await pagina.evaluate(() => ({ aviso: !!document.querySelector('.aviso-cookies'), mapa: !!document.querySelector('#visitanos iframe') }));
+  prueba('cookies: el aviso sale a quien llega por primera vez y el mapa carga sin esperar a que lo cierre', antes.aviso && antes.mapa, JSON.stringify(antes));
+  await pagina.screenshot({ path: join(SALIDA, '390-cookies.png') });
+  await pagina.evaluate(() => [...document.querySelectorAll('.aviso-cookies button')].find((b) => b.textContent.includes('Entendido')).click());
+  await esperar(200);
+  // Sin recargar: al recargar, esta página vuelve a borrar la marca (ver abrir()). Con la marca, el aviso no vuelve.
+  const despues = await pagina.evaluate((clave) => ({ aviso: !!document.querySelector('.aviso-cookies'), marca: !!JSON.parse(localStorage.getItem(clave) ?? 'null')?.fecha }), CLAVE_COOKIES);
+  prueba('cookies: "Entendido" lo cierra y queda la marca para no volver a mostrarlo', !despues.aviso && despues.marca, JSON.stringify(despues));
   await pagina.close();
 }
 

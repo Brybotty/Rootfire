@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { CartaService } from '../carta/carta.service';
 import { IconoComponent } from '../compartido/icono.component';
 import { firebaseListo } from '../firebase/config';
-import { ConsentimientoService } from '../legal/consentimiento.service';
 import { RedSocialComponent } from '../compartido/red-social.component';
 import { LogotipoComponent } from '../marca/logotipo.component';
 import { RotuloComponent } from '../marca/rotulo.component';
@@ -81,7 +80,7 @@ import { EstadoNegocioComponent } from './estado-negocio.component';
             <nav class="mt-1 flex flex-wrap gap-x-5" aria-label="Información legal">
               <a href="/politica-de-datos" class="enlace-toque underline-offset-4 hover:text-papel-100 hover:underline">Política de datos</a>
               <a href="/terminos" class="enlace-toque underline-offset-4 hover:text-papel-100 hover:underline">Términos y condiciones</a>
-              <button type="button" class="enlace-toque underline-offset-4 hover:text-papel-100 hover:underline" (click)="consentimiento.abrirPreferencias()">Preferencias de cookies</button>
+              <a href="/politica-de-datos#cookies" class="enlace-toque underline-offset-4 hover:text-papel-100 hover:underline">Cookies</a>
             </nav>
           </div>
           <p>
@@ -99,7 +98,6 @@ import { EstadoNegocioComponent } from './estado-negocio.component';
 })
 export class PieComponent {
   protected readonly n = inject(NegocioService);
-  protected readonly consentimiento = inject(ConsentimientoService);
   protected readonly c = this.n.cliente;
   private readonly cartas = inject(CartaService);
   protected readonly club = computed(() => this.cartas.carta().club);

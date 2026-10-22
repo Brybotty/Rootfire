@@ -1,7 +1,6 @@
 import { ChangeDetectionStrategy, Component, afterNextRender, inject } from '@angular/core';
 import { Title } from '@angular/platform-browser';
 import { CLIENTE } from '../config/cliente';
-import { ConsentimientoService } from '../legal/consentimiento.service';
 import { formatoCelular } from '../negocio/contacto';
 import { PaginaComponent } from './pagina.component';
 
@@ -103,15 +102,13 @@ import { PaginaComponent } from './pagina.component';
         <h2 id="cookies">8. Cookies y contenido de terceros</h2>
         <p>Una cookie es un dato pequeño que una página guarda en tu navegador. Aquí usamos lo siguiente:</p>
         <ul>
-          <li><strong>Necesarias (siempre activas):</strong> el pedido que estás armando (solo por ese día), tu sesión si entras al {{ club }} (Firebase, de Google), una copia de la carta para que abra rápido y sin conexión, y lo que eliges en el aviso de cookies y en la ventana de la promo. Sin ellas la página no funciona, por eso no piden permiso. Se guardan en tu navegador y no las usamos para publicidad.</li>
-          <li><strong>Mapa de Google (con tu permiso):</strong> el mapa interactivo de cómo llegar lo sirve Google, que puede guardar sus propias cookies y conocer tu dirección IP. No se carga hasta que lo aceptas en el aviso o tocas "Ver el mapa aquí". Sin él, el botón "Cómo llegar" te lleva igual a Google Maps.</li>
+          <li><strong>Necesarias (siempre activas):</strong> el pedido que estás armando (solo por ese día), tu sesión si entras al {{ club }} (Firebase, de Google), una copia de la carta para que abra rápido y sin conexión, y que ya viste el aviso de cookies y la ventana de la promo. Sin ellas la página no funciona, por eso no piden permiso. Se guardan en tu navegador y no las usamos para publicidad.</li>
+          <li><strong>Mapa de Google (siempre visible):</strong> el mapa interactivo de cómo llegar, en la sección "Visítanos", lo sirve Google, que puede guardar sus propias cookies y conocer tu dirección IP. Se carga al bajar hasta esa sección, sin pedir permiso.</li>
         </ul>
         <p>No usamos cookies de publicidad ni herramientas de medición o seguimiento.</p>
         <p>
-          Puedes cambiar tu elección cuando quieras:
-          <button type="button" class="enlace" (click)="consentimiento.abrirPreferencias()">abrir las preferencias de cookies</button>.
-          También puedes borrar las cookies desde los ajustes de tu navegador; si borras las necesarias, se pierde el
-          pedido que tenías armado y tendrás que iniciar sesión de nuevo.
+          Puedes borrar las cookies cuando quieras desde los ajustes de tu navegador; si borras las necesarias, se pierde
+          el pedido que tenías armado y tendrás que iniciar sesión de nuevo.
         </p>
 
         <h2 id="autorizacion">9. Autorización</h2>
@@ -129,7 +126,6 @@ import { PaginaComponent } from './pagina.component';
   `,
 })
 export class PoliticaDatosComponent {
-  protected readonly consentimiento = inject(ConsentimientoService);
   protected readonly c = CLIENTE;
   protected readonly legal = CLIENTE.legal;
   protected readonly club = CLIENTE.club.nombre;

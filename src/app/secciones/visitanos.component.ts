@@ -4,7 +4,6 @@ import { IconoComponent } from '../compartido/icono.component';
 import { RedSocialComponent } from '../compartido/red-social.component';
 import { RevelarDirective } from '../compartido/revelar.directive';
 import { StickerComponent } from '../compartido/sticker.component';
-import { ConsentimientoService } from '../legal/consentimiento.service';
 import { NegocioService } from '../negocio/negocio.service';
 import { ConexionService } from '../pwa/conexion.service';
 import { EstadoNegocioComponent } from './estado-negocio.component';
@@ -28,15 +27,14 @@ const MAPA_VALIDO = /^https:\/\/www\.google\.com\/maps\/embed\?/;
 
         <div class="mt-10 grid gap-5 lg:grid-cols-12">
           <!--
-            Mapa de Google: solo con permiso del visitante (guarda cookies de Google; ver legal/consentimiento.service.ts)
-            y solo cuando está por aparecer. El iframe es de Google y su pin no se
+            Mapa de Google (el iframe solo se carga cuando está por aparecer). El iframe es de Google y su pin no se
             puede cambiar: como Google lo pinta justo en el centro, encima va el sticker de la marca. El mapa arranca
             fijo (así no atrapa el scroll en celular); "Explorar el mapa" lo desbloquea y quita el sticker, porque al
             moverlo ya no coincidiría con el lugar.
           -->
           <div #contenedorMapa appRevelar class="tarjeta relative min-h-[20rem] overflow-hidden sm:min-h-[24rem] lg:col-span-7 lg:min-h-0">
             @if (mapa(); as src) {
-              @if (cargarMapa() && conexion.enLinea() && consentimiento.mapa()) {
+              @if (cargarMapa() && conexion.enLinea()) {
                 <iframe [src]="src" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen
                         class="mapa-oscuro absolute inset-0 h-full w-full border-0" [class.pointer-events-none]="!explorando()"
                         [title]="'Mapa de ' + c.nombre" [attr.tabindex]="explorando() ? null : -1" (load)="mapaListo.set(true)"></iframe>
@@ -54,7 +52,7 @@ const MAPA_VALIDO = /^https:\/\/www\.google\.com\/maps\/embed\?/;
                 }
               }
             }
-            @if (!mapa() || !conexion.enLinea() || !consentimiento.mapa()) {
+            @if (!mapa() || !conexion.enLinea()) {
               <div class="absolute inset-0 bg-[linear-gradient(rgb(var(--papel-100)/0.05)_1px,transparent_1px),linear-gradient(90deg,rgb(var(--papel-100)/0.05)_1px,transparent_1px)] bg-[size:28px_28px]" aria-hidden="true"></div>
               <svg class="absolute inset-0 h-full w-full text-papel-100/10" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
                 <path d="M-10 210 C 90 180 150 230 230 190 S 360 120 420 150" fill="none" stroke="currentColor" stroke-width="18" />
@@ -67,18 +65,10 @@ const MAPA_VALIDO = /^https:\/\/www\.google\.com\/maps\/embed\?/;
                 <p class="max-w-xs text-sm text-papel-300">
                   @if (!conexion.enLinea()) {
                     Sin conexión: el mapa aparece cuando vuelva el internet.
-                  } @else if (mapa()) {
-                    El mapa lo muestra Google, que guarda sus propias cookies. Sale aquí si nos das permiso.
                   } @else {
                     El mapa aparece aquí en cuanto confirmemos la dirección exacta.
                   }
                 </p>
-                @if (mapa() && conexion.enLinea()) {
-                  <button type="button" class="boton-linea mt-1 !min-h-11 !py-2 !text-sm" (click)="consentimiento.permitir('mapa')">
-                    <app-icono nombre="pin" class="h-4 w-4 text-destello-400" />
-                    Ver el mapa aquí
-                  </button>
-                }
               </div>
             }
           </div>
@@ -188,7 +178,6 @@ const MAPA_VALIDO = /^https:\/\/www\.google\.com\/maps\/embed\?/;
 export class VisitanosComponent {
   protected readonly n = inject(NegocioService);
   protected readonly conexion = inject(ConexionService);
-  protected readonly consentimiento = inject(ConsentimientoService);
   protected readonly c = this.n.cliente;
   private readonly sanitizer = inject(DomSanitizer);
   private readonly contenedor = viewChild.required<ElementRef<HTMLElement>>('contenedorMapa');

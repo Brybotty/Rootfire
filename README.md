@@ -177,12 +177,12 @@ Google" deja crear una cuenta de prueba: usa el correo de `adminEmail` para entr
   (sus condiciones salen solas de lo que el admin tenga puesto), garantía y retracto (no aplica a comida: Ley 1480,
   art. 47). Enlaces en el pie de la página. **Faltan razón social, NIT y un correo** (`legal` en la config) y conviene
   que un abogado revise los dos textos antes de lanzar el Club.
-- **Aviso de cookies** (`legal/aviso-cookies.component.ts`), igual al de El Acicale: "Aceptar todo", "Solo las
-  necesarias" o "Elegir una por una", y "Preferencias de cookies" en el pie para cambiarlo. Lo necesario (el pedido,
-  la sesión, la copia de la carta y la elección) no pide permiso. Lo único de terceros es el **mapa de Google**: aquí
-  **solo carga con permiso** (en su lugar sale "Ver el mapa aquí"; "Cómo llegar" funciona igual). En El Acicale el
-  negocio decidió mostrarlo siempre; si Rootfire lo prefiere así, basta con que `ConsentimientoService.mapa` sea
-  `true`. No hay publicidad ni medición: si algún día se agrega (Meta Pixel, Analytics), va como otra opción del aviso.
+- **Aviso de cookies** (`legal/aviso-cookies.component.ts`), informativo: dice que la página usa solo lo necesario (el
+  pedido, la sesión, la copia de la carta) y que el **mapa de Google se muestra siempre** (decisión del negocio,
+  2026-10-22, como en El Acicale: carga al bajar a "Visítanos", sin pedir permiso, y Google puede guardar sus cookies).
+  Se cierra con "Entendido"; "Más información" y el enlace "Cookies" del pie llevan a la sección de cookies de la
+  política, que dice lo mismo. No hay publicidad ni medición: si algún día se agrega (Meta Pixel, Analytics), eso sí
+  debe cargar solo con permiso, y el aviso tendría que volver a ofrecer elegir (como el de El Acicale).
 
 ### Assets oficiales (logotipo, sello, stickers, paleta y fotos)
 Salen de los archivos de la diseñadora de Rootfire (`recursos/originales/ASSETS ROOTFIRE.ai` y `MENÚ RGB.ai`), que son
