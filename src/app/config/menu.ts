@@ -6,7 +6,8 @@ import type { Adicional, Foto, Menu } from '../menu/menu.model';
  * Sin el gramaje de la carne (la carta dice 150 g y 120 g): el cliente pidió quitarlo el 2026-10-09.
  * Las fotos son las de su diseñadora (public/platos). TODO: alérgenos, solo si el negocio los confirma.
  *
- * Para migrar a Firestore: cada categoría y cada plato ya es un documento plano con su `id`.
+ * Es la carta con la que arranca la página y la que el admin carga en Firestore la primera vez (Admin → Menú).
+ * Desde ahí los precios y los platos se cambian en el panel; este archivo queda como respaldo sin conexión.
  */
 
 /** Fotos de la diseñadora, recortadas (scripts/assets/extraer.py las saca del archivo del menú). */
@@ -19,7 +20,7 @@ const foto = (plato: string, alt: string): Foto => ({
   alt,
 });
 
-/** Las adiciones de la carta: se muestran en su sección y también en el detalle de cada hamburguesa. */
+/** Las adiciones de la carta: se muestran en su sección y también en el detalle de cada hamburguesa (`adicionesDe`). */
 const ADICIONES: Adicional[] = [
   { nombre: 'Papas a la francesa', precio: 4000 },
   { nombre: 'Aritos de cebolla x5', precio: 4000 },
@@ -31,6 +32,7 @@ export const MENU: Menu = {
   rangosPrecio: [10000, 20000],
   notaCombo: 'Los combos incluyen papas a la francesa o aritos de cebolla x5 y una Coca Cola de 250 ml.',
   acompanamientosCombo: ['Papas a la francesa', 'Aritos de cebolla x5'],
+  adicionesDe: 'adiciones',
   categorias: [
     { id: 'hamburguesas', nombre: 'Hamburguesas', descripcion: 'Sola o en combo.', icono: 'hamburguesa', orden: 1, estilo: 'cartel' },
     { id: 'adiciones', nombre: 'Adiciones', icono: 'papas', orden: 2, estilo: 'lista', tono: 'verde-oscuro' },
@@ -49,7 +51,7 @@ export const MENU: Menu = {
       ingredientes: ['Carne Angus', 'Tocineta caramelizada al ron', 'Doble textura de queso', 'Pepinillos', 'Lechuga'],
       precio: 25000,
       precioCombo: 32000,
-      adicionales: ADICIONES,
+      conAdiciones: true,
       tono: 'verde',
       orden: 1,
       ilustracion: { tipo: 'hamburguesa', pan: 'brioche', capas: ['carne', 'queso', 'mermelada-tocineta', 'tocineta', 'pepinillos', 'lechuga'] },
@@ -64,7 +66,7 @@ export const MENU: Menu = {
       ingredientes: ['Carne a la parrilla', 'Queso', 'Lechuga', 'Tomate', 'Pepinillos', 'Salsa de la casa'],
       precio: 19000,
       precioCombo: 26000,
-      adicionales: ADICIONES,
+      conAdiciones: true,
       tono: 'amarillo',
       orden: 2,
       ilustracion: { tipo: 'hamburguesa', pan: 'brioche', capas: ['carne', 'queso', 'salsa', 'pepinillos', 'tomate', 'lechuga'] },
@@ -80,7 +82,7 @@ export const MENU: Menu = {
       ingredientes: ['Pan brioche', 'Carne Angus', 'Mermelada de tocineta al ron artesanal', 'Cheddar fundido', 'Queso crema'],
       precio: 20000,
       precioCombo: 27000,
-      adicionales: ADICIONES,
+      conAdiciones: true,
       destacado: true,
       tono: 'naranja',
       orden: 3,
@@ -97,7 +99,7 @@ export const MENU: Menu = {
       ingredientes: ['Pan artesanal', 'Carne Angus', 'Lechuga crocante', 'Cebolla dulce caramelizada', 'Cheddar fundido', 'Salsa secreta'],
       precio: 15000,
       precioCombo: 22000,
-      adicionales: ADICIONES,
+      conAdiciones: true,
       tono: 'rojo',
       orden: 4,
       ilustracion: { tipo: 'hamburguesa', pan: 'brioche', capas: ['carne', 'queso', 'cebolla-caramelizada', 'salsa', 'lechuga'] },
@@ -113,7 +115,7 @@ export const MENU: Menu = {
       ingredientes: ['Carne Angus', 'Plátano maduro caramelizado', 'Queso derretido', 'Tocineta crujiente', 'Salsa secreta'],
       precio: 23000,
       precioCombo: 30000,
-      adicionales: ADICIONES,
+      conAdiciones: true,
       tono: 'verde',
       orden: 5,
       ilustracion: { tipo: 'hamburguesa', pan: 'brioche', capas: ['carne', 'queso', 'maduro', 'tocineta', 'salsa'] },

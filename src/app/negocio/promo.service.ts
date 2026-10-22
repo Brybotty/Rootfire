@@ -1,16 +1,21 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { CartaService } from '../carta/carta.service';
 import { CLIENTE } from '../config/cliente';
 import { NegocioService } from './negocio.service';
 import { marcaVista, promoVigente } from './promocion';
 
 const CLAVE = `${CLIENTE.id}:promo`;
 
-/** Promo del mes: si está vigente, si su ventana está abierta y si ya salió sola hoy en este navegador. */
+/** Promo del mes: cuál está vigente, si su ventana está abierta y si ya salió sola hoy en este navegador. */
 @Injectable({ providedIn: 'root' })
 export class PromoService {
   private readonly negocio = inject(NegocioService);
-  /** Se revisa con el reloj del negocio: al pasar su última fecha deja de mostrarse sin tocar nada. */
-  readonly promo = computed(() => promoVigente(CLIENTE.promocion, this.negocio.ahora()));
+  private readonly cartas = inject(CartaService);
+  /**
+   * Se revisa con el reloj del negocio: al pasar su última fecha deja de mostrarse sin tocar nada, y la siguiente
+   * promo que el admin dejó programada sale sola el día que empieza.
+   */
+  readonly promo = computed(() => promoVigente(this.cartas.carta().promociones, this.negocio.ahora()));
   readonly abierta = signal(false);
 
   abrir() {

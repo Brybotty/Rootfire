@@ -1,0 +1,228 @@
+rules_version = '2';
+
+// Reglas de Firestore. Cada caso está probado en pruebas/reglas.mjs (npm run test:reglas): lo que la página hace
+// debe funcionar y cada abuso desde la consola del navegador debe fallar.
+//
+// - publico/carta: la carta (menú, promos y ajustes del Club). La lee cualquiera; la escribe el admin.
+// - clientes/{uid}: el perfil del Club. Lo ve y lo cambia su dueño (sin tocar sus sellos ni la prueba de su
+//   autorización); el admin lo ve y le cambia los sellos.
+// - pedidos/{id}: los pedidos de clientes registrados. Los crea su dueño; el admin los marca entregados o cancelados.
+// - cupones/{CODIGO}: se puede leer uno si se sabe el código, pero no listarlos. usos/{uid}: quién gastó uno de un
+//   solo uso (se crea junto con el pedido y no se puede repetir).
+// - admins/{correo}: quién entra al panel, además de la cuenta principal.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Quién es quién ----------
+
+    function conSesion() {
+      return request.auth != null;
+    }
+
+    function correo() {
+      return request.auth.token.get('email', '').lower();
+    }
+
+    // Google entrega el correo verificado; una cuenta de correo y contraseña creada con un correo ajeno no lo está.
+    function correoVerificado() {
+      return request.auth.token.get('email_verified', false) == true;
+    }
+
+    // La cuenta principal (adminEmail en src/app/config/clientes/*.ts; también en storage.rules) o una de `admins`.
+    // El correo va primero: la cuenta principal no gasta una lectura.
+    function esAdmin() {
+      return conSesion() && correoVerificado()
+        && (correo() == 'ortizgonzalesbryanalexander1@gmail.com'
+            || exists(/databases/$(database)/documents/admins/$(correo())));
+    }
+
+    function esDueno(uid) {
+      return conSesion() && request.auth.uid == uid;
+    }
+
+    // ---------- Ayudas ----------
+
+    function soloCampos(campos) {
+      return request.resource.data.keys().hasOnly(campos);
+    }
+
+    function soloCambia(campos) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(campos);
+    }
+
+    function textoOpcional(datos, campo, maximo) {
+      return !(campo in datos) || (datos[campo] is string && datos[campo].size() <= maximo);
+    }
+
+    function numeroEntre(valor, minimo, maximo) {
+      return valor is number && valor >= minimo && valor <= maximo;
+    }
+
+    // ---------- Carta pública ----------
+
+    match /publico/{documento} {
+      allow read: if true;
+      allow write: if esAdmin();
+    }
+
+    // ---------- Admins ----------
+
+    match /admins/{correoAdmin} {
+      // Cada quien puede ver si su propio correo está (para mostrarle el enlace al panel).
+      allow get: if (conSesion() && correoAdmin == correo()) || esAdmin();
+      allow list, delete: if esAdmin();
+      allow create, update: if esAdmin() && correoAdmin == correoAdmin.lower() && soloCampos(['agregadoEn']);
+    }
+
+    // ---------- Clientes del Club ----------
+
+    match /clientes/{uid} {
+      function perfilValido(d) {
+        return d.nombre is string && d.nombre.size() >= 2 && d.nombre.size() <= 60
+          && d.celular is string && d.celular.matches('^3[0-9]{9}$')
+          && (!('cumpleanos' in d) || (d.cumpleanos is string && d.cumpleanos.matches('^(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$')))
+          && textoOpcional(d, 'direccion', 120)
+          && textoOpcional(d, 'barrio', 60);
+      }
+
+      // La prueba de la autorización (Ley 1581): versión de la política y la fecha del servidor, no la del navegador.
+      function autorizacionesNuevas(a) {
+        return a is map && a.keys().hasOnly(['datos', 'promociones']) && a.keys().hasAll(['datos', 'promociones'])
+          && a.datos.keys().hasOnly(['version', 'fecha']) && a.datos.version is string && a.datos.version.size() <= 20
+          && a.datos.fecha == request.time
+          && promocionesNuevas(a.promociones);
+      }
+
+      function promocionesNuevas(p) {
+        return p is map && p.keys().hasOnly(['aceptada', 'fecha']) && p.aceptada is bool && p.fecha == request.time;
+      }
+
+      allow read: if esDueno(uid) || esAdmin();
+
+      allow create: if esDueno(uid)
+        && soloCampos(['nombre', 'celular', 'correo', 'cumpleanos', 'direccion', 'barrio', 'autorizaciones', 'sellos', 'pedidosEntregados', 'creadoEn', 'actualizadoEn'])
+        && perfilValido(request.resource.data)
+        && request.resource.data.correo == correo()
+        && request.resource.data.sellos == 0
+        && request.resource.data.pedidosEntregados == 0
+        && request.resource.data.creadoEn == request.time
+        && request.resource.data.actualizadoEn == request.time
+        && autorizacionesNuevas(request.resource.data.autorizaciones);
+
+      // El dueño cambia sus datos y su autorización de promociones (con la fecha de hoy), nunca la de datos ni sus
+      // sellos. El admin cambia sellos y pedidos entregados (y puede corregir un dato de contacto).
+      allow update: if (esDueno(uid)
+          && soloCambia(['nombre', 'celular', 'cumpleanos', 'direccion', 'barrio', 'autorizaciones', 'actualizadoEn'])
+          && perfilValido(request.resource.data)
+          && request.resource.data.actualizadoEn == request.time
+          && request.resource.data.autorizaciones.datos == resource.data.autorizaciones.datos
+          && (request.resource.data.autorizaciones.promociones == resource.data.autorizaciones.promociones
+              || promocionesNuevas(request.resource.data.autorizaciones.promociones)))
+        || (esAdmin()
+          && soloCambia(['sellos', 'pedidosEntregados', 'ultimoPedidoEn', 'nombre', 'celular', 'cumpleanos', 'direccion', 'barrio'])
+          && perfilValido(request.resource.data)
+          && request.resource.data.sellos is int && request.resource.data.sellos >= 0
+          && request.resource.data.pedidosEntregados is int && request.resource.data.pedidosEntregados >= 0);
+
+      // Eliminar la cuenta (derecho de supresión), o el admin ante una solicitud.
+      allow delete: if esDueno(uid) || esAdmin();
+    }
+
+    // ---------- Pedidos de clientes registrados ----------
+
+    match /pedidos/{id} {
+      function pedidoValido(d) {
+        return d.cliente is map && d.cliente.keys().hasOnly(['nombre', 'celular'])
+          && d.cliente.nombre is string && d.cliente.nombre.size() <= 60
+          && d.cliente.celular is string && d.cliente.celular.size() <= 15
+          && d.lineas is list && d.lineas.size() >= 1 && d.lineas.size() <= 40
+          && numeroEntre(d.subtotal, 0, 10000000)
+          && d.total is number && d.total == d.subtotal - d.get('descuento', { 'valor': 0 }).valor
+          && d.entrega in ['domicilio', 'recoger']
+          && textoOpcional(d, 'direccion', 200)
+          && textoOpcional(d, 'nota', 200)
+          && textoOpcional(d, 'premio', 100);
+      }
+
+      // Un solo descuento: el del Club o un cupón que existe y está activo. Si el cupón es de un solo uso, el pedido
+      // debe crear en la misma escritura la marca de uso, que solo se puede crear una vez.
+      function descuentoValido(d) {
+        return !('descuento' in d) || (
+          d.descuento is map && d.descuento.keys().hasOnly(['tipo', 'concepto', 'valor', 'cupon'])
+          && numeroEntre(d.descuento.valor, 0, d.subtotal)
+          && d.descuento.concepto is string && d.descuento.concepto.size() <= 80
+          && (d.descuento.tipo == 'club'
+              || (d.descuento.tipo == 'cupon' && d.descuento.cupon is string && cuponUsable(d.descuento.cupon))));
+      }
+
+      function cuponUsable(codigo) {
+        let ruta = /databases/$(database)/documents/cupones/$(codigo);
+        let uso = /databases/$(database)/documents/cupones/$(codigo)/usos/$(request.auth.uid);
+        return exists(ruta) && get(ruta).data.activo == true
+          && (get(ruta).data.unUso != true || (existsAfter(uso) && !exists(uso)));
+      }
+
+      // Canjear el premio pide tener los sellos de la meta que está publicada.
+      function premioValido(d) {
+        return !('premio' in d)
+          || get(/databases/$(database)/documents/clientes/$(request.auth.uid)).data.sellos
+             >= get(/databases/$(database)/documents/publico/carta).data.club.sellos.meta;
+      }
+
+      allow read: if (conSesion() && resource.data.uid == request.auth.uid) || esAdmin();
+
+      allow create: if conSesion()
+        && request.resource.data.uid == request.auth.uid
+        && soloCampos(['uid', 'cliente', 'lineas', 'subtotal', 'descuento', 'premio', 'total', 'entrega', 'direccion', 'nota', 'estado', 'creadoEn'])
+        && request.resource.data.estado == 'enviado'
+        && request.resource.data.creadoEn == request.time
+        && exists(/databases/$(database)/documents/clientes/$(request.auth.uid))
+        && pedidoValido(request.resource.data)
+        && descuentoValido(request.resource.data)
+        && premioValido(request.resource.data);
+
+      allow update: if esAdmin()
+        && soloCambia(['estado', 'cerradoEn'])
+        && request.resource.data.estado in ['enviado', 'entregado', 'cancelado'];
+
+      // El dueño, al eliminar su cuenta; el admin, ante una solicitud.
+      allow delete: if (conSesion() && resource.data.uid == request.auth.uid) || esAdmin();
+    }
+
+    // ---------- Cupones ----------
+
+    match /cupones/{codigo} {
+      function cuponValido(d) {
+        return soloCampos(['descripcion', 'tipo', 'valor', 'minimo', 'desde', 'hasta', 'activo', 'soloClub', 'unUso'])
+          && codigo.matches('^[A-Z0-9-]{3,20}$')
+          && d.descripcion is string && d.descripcion.size() <= 80
+          && d.tipo in ['porcentaje', 'valor']
+          && numeroEntre(d.valor, 1, d.tipo == 'porcentaje' ? 100 : 1000000)
+          && numeroEntre(d.minimo, 0, 10000000)
+          && d.desde is string && d.desde.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && d.hasta is string && d.hasta.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+          && d.activo is bool && d.soloClub is bool && d.unUso is bool;
+      }
+
+      // Leer uno por su código sí (la página lo revisa al aplicarlo); listarlos, no.
+      allow get: if true;
+      allow list, delete: if esAdmin();
+      allow create, update: if esAdmin() && cuponValido(request.resource.data);
+
+      match /usos/{uid} {
+        allow get: if esDueno(uid) || esAdmin();
+        allow list, delete: if esAdmin();
+        // Solo junto con un pedido suyo que use este cupón (ver cuponUsable arriba).
+        allow create: if esDueno(uid)
+          && get(/databases/$(database)/documents/cupones/$(codigo)).data.unUso == true
+          && soloCampos(['pedidoId', 'fecha'])
+          && request.resource.data.fecha == request.time
+          && request.resource.data.pedidoId is string
+          && getAfter(/databases/$(database)/documents/pedidos/$(request.resource.data.pedidoId)).data.uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/pedidos/$(request.resource.data.pedidoId)).data.descuento.cupon == codigo;
+      }
+    }
+
+    // Cualquier otra colección está cerrada.
+  }
+}

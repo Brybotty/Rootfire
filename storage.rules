@@ -1,0 +1,34 @@
+rules_version = '2';
+
+// Reglas de Storage. Cada caso está probado en pruebas/reglas-storage.mjs (npm run test:reglas).
+//
+// Solo hay imágenes públicas de la carta (fotos de platos y afiches de promos) en publico/. Las sube el panel ya
+// reducidas a WebP o JPEG (unos 100 KB). Las lee cualquiera; las escribe el admin.
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // La cuenta principal (adminEmail en la config del cliente y en firestore.rules) o una de `admins` en Firestore.
+    // Leer Firestore desde aquí requiere que la cuenta de servicio de Storage tenga el rol "Firebase Rules Firestore
+    // Service Agent" (el primer `firebase deploy --only storage` lo ofrece); sin él, solo entra la cuenta principal.
+    function esAdmin() {
+      return request.auth != null
+        && request.auth.token.get('email_verified', false) == true
+        && (request.auth.token.get('email', '').lower() == 'ortizgonzalesbryanalexander1@gmail.com'
+            || firestore.exists(/databases/(default)/documents/admins/$(request.auth.token.get('email', '').lower())));
+    }
+
+    // Ni HTML ni SVG (servidos desde aquí podrían llevar scripts), y menos de 3 MB.
+    function esImagen() {
+      return request.resource.contentType.matches('image/(webp|jpeg)')
+        && request.resource.size < 3 * 1024 * 1024;
+    }
+
+    match /publico/{carpeta}/{archivo} {
+      allow read: if true;
+      allow create, update: if esAdmin() && carpeta in ['platos', 'promos'] && esImagen();
+      allow delete: if esAdmin();
+    }
+
+    // Lo demás, cerrado.
+  }
+}

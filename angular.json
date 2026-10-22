@@ -31,8 +31,8 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "475kB",
-                  "maximumError": "500kB"
+                  "maximumWarning": "525kB",
+                  "maximumError": "575kB"
                 },
                 {
                   "type": "anyComponentStyle",
@@ -55,6 +55,17 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "emulador": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "src/app/firebase/entorno.ts",
+                  "with": "src/app/firebase/entorno.emulador.ts"
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -67,6 +78,9 @@
             },
             "development": {
               "buildTarget": "rootfire-burgers:build:development"
+            },
+            "emulador": {
+              "buildTarget": "rootfire-burgers:build:emulador"
             }
           },
           "defaultConfiguration": "development"

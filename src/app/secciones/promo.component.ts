@@ -3,6 +3,7 @@ import { IconoComponent } from '../compartido/icono.component';
 import { RedSocialComponent } from '../compartido/red-social.component';
 import { StickerComponent } from '../compartido/sticker.component';
 import type { Promocion } from '../config/modelo';
+import { CartaService } from '../carta/carta.service';
 import { formatoPrecio } from '../menu/precio';
 import { NegocioService } from '../negocio/negocio.service';
 import { PromoService } from '../negocio/promo.service';
@@ -13,6 +14,8 @@ const PARAMETRO = 'promo';
 const ESPERA = 1600;
 /** Si el afiche tarda más que esto en bajar, la ventana ya no sale sola: quien entró ya está leyendo el menú. */
 const LIMITE_CARGA = 6000;
+/** Lo que se espera a que llegue la carta de Firestore (con la promo que el admin tenga programada). */
+const LIMITE_CARTA = 3000;
 /**
  * Ancho que se le declara al navegador para elegir el archivo. En celular se dice menos de lo que mide para
  * que baje el de 720 px (≈ 2x, nítido) y no el de 1080: son 100 KB menos con datos móviles.
@@ -103,6 +106,7 @@ const TAMANOS = '(min-width: 768px) 400px, 240px';
 export class PromoComponent {
   protected readonly promos = inject(PromoService);
   private readonly negocio = inject(NegocioService);
+  private readonly cartas = inject(CartaService);
   private readonly cd = inject(ChangeDetectorRef);
   private readonly dialogo = viewChild<ElementRef<HTMLDialogElement>>('dialogo');
 
@@ -118,7 +122,6 @@ export class PromoComponent {
 
     const destruir = inject(DestroyRef);
     afterNextRender(() => {
-      const promo = this.promos.promo();
       const consulta = new URLSearchParams(location.search);
       // Enlace directo (?promo), para historias y estados: abre la ventana aunque ya haya salido hoy. Con la promo
       // vencida el enlace abre la página normal. El parámetro se quita para que recargar no la reabra.
@@ -128,11 +131,16 @@ export class PromoComponent {
         const resto = consulta.toString();
         history.replaceState(history.state, '', `${location.pathname}${resto ? `?${resto}` : ''}${location.hash}`);
       }
-      // Sola no sale si ya salió hoy, ni cuando la página abrió con un plato compartido (?plato=…).
-      if (!promo || consulta.has('plato') || (!pedida && this.promos.vistaHoy())) return;
+      // Sola no sale cuando la página abrió con un plato compartido (?plato=…).
+      if (consulta.has('plato')) return;
       let cancelada = false;
       const espera = setTimeout(
         async () => {
+          // Vale la promo de la carta de Firestore (la copia del navegador puede ser de antes, o no haber copia).
+          await Promise.race([this.cartas.lista, new Promise((listo) => setTimeout(listo, LIMITE_CARTA))]);
+          const promo = this.promos.promo();
+          // Sola sale una vez al día; el enlace ?promo la abre aunque ya haya salido.
+          if (!promo || (!pedida && this.promos.vistaHoy())) return;
           const cargo = await this.precargar(promo);
           // Tampoco interrumpe si ya hay otra ventana abierta (el detalle de un plato) o la pestaña no se ve.
           if (!cargo || cancelada || document.visibilityState !== 'visible' || document.querySelector('dialog[open]')) return;

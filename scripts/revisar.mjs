@@ -15,8 +15,10 @@ import { cargarConfig } from './lib/config.mjs';
 const { CLIENTE, MENU } = await cargarConfig();
 const { ROTULOS } = await import('../src/app/marca/nombres.ts');
 const { promoVigente } = await import('../src/app/negocio/promocion.ts');
-const PROMO = promoVigente(CLIENTE.promocion);
+const PROMO = promoVigente(CLIENTE.promocion ? [CLIENTE.promocion] : []);
 const CLAVE_PROMO = `${CLIENTE.id}:promo`;
+// La del aviso de cookies (legal/consentimiento.service.ts).
+const CLAVE_COOKIES = `${CLIENTE.id}:cookies-v1`;
 const CLAVE_PEDIDO = `${CLIENTE.id}:pedido`;
 const PEDIDOS = CLIENTE.contacto.whatsapp.activo && !!CLIENTE.contacto.whatsapp.pedidos;
 const pesos = (valor) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor).replace(/\s/g, ' ');
@@ -46,8 +48,10 @@ const TIPOS = {
 const hosting = JSON.parse(readFileSync(join(RAIZ, 'firebase.json'), 'utf8')).hosting;
 const encabezados = Object.fromEntries(
   hosting.headers
-    .find((h) => h.source === '**')
-    .headers.map(({ key, value }) => [key, key === 'Content-Security-Policy' ? value.replace(/;\s*upgrade-insecure-requests/, '') : value])
+    // Los de todas las páginas: '**' y la regla que deja fuera /__/ (las páginas de Firebase para entrar con Google).
+    .filter((h) => h.source === '**' || (h.regex && new RegExp(h.regex).test('/')))
+    .flatMap((h) => h.headers)
+    .map(({ key, value }) => [key, key === 'Content-Security-Policy' ? value.replace(/;\s*upgrade-insecure-requests/, '') : value])
     .filter(([key]) => key !== 'Strict-Transport-Security'),
 );
 const servidor = createServer((req, res) => {
@@ -72,7 +76,7 @@ const prueba = (nombre, ok, detalle = '') => {
 };
 const esperar = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function abrir(navegador, ancho, { ruta = '/', movil = ancho < 1024 } = {}) {
+async function abrir(navegador, ancho, { ruta = '/', movil = ancho < 1024, cookies = true } = {}) {
   const pagina = await navegador.newPage();
   await pagina.setViewport({ width: ancho, height: movil ? 844 : 900, deviceScaleFactor: 1, isMobile: movil, hasTouch: movil });
   pagina.on('console', (m) => {
@@ -86,6 +90,13 @@ async function abrir(navegador, ancho, { ruta = '/', movil = ancho < 1024 } = {}
   });
   // La ventana de la promo sale sola una vez al día: aquí se marca como vista para que no tape lo que se revisa
   // (tiene su propio bloque de pruebas más abajo). La marca es la de promocion.ts: id de la promo y fecha de Colombia.
+  // Igual con el aviso de cookies: se revisa como quien ya aceptó (el aviso tiene su propio bloque más abajo).
+  // (Las páginas comparten el almacenamiento del navegador: sin `cookies` se borra la elección de antes.)
+  await pagina.evaluateOnNewDocument(
+    (clave, aceptadas) => (aceptadas ? localStorage.setItem(clave, JSON.stringify({ mapa: true, fecha: new Date().toISOString() })) : localStorage.removeItem(clave)),
+    CLAVE_COOKIES,
+    cookies,
+  );
   if (PROMO) {
     await pagina.evaluateOnNewDocument(
       (clave, id) => localStorage.setItem(clave, `${id}|${new Date(Date.now() - 5 * 3600_000).toISOString().slice(0, 10)}`),
@@ -384,6 +395,23 @@ for (const ancho of [390, 1440]) {
   await pagina.evaluate(() => document.querySelectorAll('.revelar').forEach((e) => e.classList.add('revelado')));
   await esperar(900);
   await pagina.screenshot({ path: join(SALIDA, '390-horario.png') });
+  await pagina.close();
+}
+
+// ——— Aviso de cookies: sale a quien llega por primera vez; sin permiso no se carga el mapa de Google ———
+{
+  const pagina = await abrir(navegador, 390, { cookies: false });
+  prueba('cookies: el aviso sale a quien llega por primera vez', await pagina.evaluate(() => !!document.querySelector('.aviso-cookies')));
+  await pagina.screenshot({ path: join(SALIDA, '390-cookies.png') });
+  await pagina.evaluate(() => [...document.querySelectorAll('.aviso-cookies button')].find((b) => b.textContent.includes('Solo las necesarias')).click());
+  await pagina.evaluate(() => document.getElementById('visitanos').scrollIntoView({ behavior: 'instant' }));
+  await esperar(1500);
+  const sinMapa = await pagina.evaluate(() => ({
+    aviso: !!document.querySelector('.aviso-cookies'),
+    iframe: !!document.querySelector('#visitanos iframe'),
+    boton: [...document.querySelectorAll('#visitanos button')].some((b) => b.textContent.includes('Ver el mapa aquí')),
+  }));
+  prueba('cookies: "Solo las necesarias" quita el aviso y el mapa de Google no carga (sale el botón para verlo)', !sinMapa.aviso && !sinMapa.iframe && sinMapa.boton, JSON.stringify(sinMapa));
   await pagina.close();
 }
 

@@ -1,5 +1,8 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { CartaService } from '../carta/carta.service';
 import { IconoComponent } from '../compartido/icono.component';
+import { firebaseListo } from '../firebase/config';
+import { ConsentimientoService } from '../legal/consentimiento.service';
 import { RedSocialComponent } from '../compartido/red-social.component';
 import { LogotipoComponent } from '../marca/logotipo.component';
 import { RotuloComponent } from '../marca/rotulo.component';
@@ -40,6 +43,13 @@ import { EstadoNegocioComponent } from './estado-negocio.component';
                   <app-icono nombre="imprimir" class="h-4 w-4" /> Imprimir el menú
                 </button>
               </li>
+              @if (cuentas) {
+                <li>
+                  <a href="/cuenta" class="enlace-toque text-papel-100 transition hover:text-destello-300">
+                    <app-icono nombre="usuario" class="h-4 w-4" /> {{ club().activo ? club().nombre : 'Mi cuenta' }}
+                  </a>
+                </li>
+              }
             </ul>
           </nav>
 
@@ -66,7 +76,14 @@ import { EstadoNegocioComponent } from './estado-negocio.component';
         </div>
 
         <div class="mt-14 flex flex-col gap-2 border-t border-papel-100/10 pt-6 text-sm text-papel-400 sm:flex-row sm:items-center sm:justify-between">
-          <p>© {{ anio }} {{ c.nombre }}. Precios en pesos colombianos.</p>
+          <div>
+            <p>© {{ anio }} {{ c.nombre }}. Precios en pesos colombianos.</p>
+            <nav class="mt-1 flex flex-wrap gap-x-5" aria-label="Información legal">
+              <a href="/politica-de-datos" class="enlace-toque underline-offset-4 hover:text-papel-100 hover:underline">Política de datos</a>
+              <a href="/terminos" class="enlace-toque underline-offset-4 hover:text-papel-100 hover:underline">Términos y condiciones</a>
+              <button type="button" class="enlace-toque underline-offset-4 hover:text-papel-100 hover:underline" (click)="consentimiento.abrirPreferencias()">Preferencias de cookies</button>
+            </nav>
+          </div>
           <p>
             {{ c.firma.etiqueta }} ·
             @if (c.firma.url) {
@@ -82,7 +99,12 @@ import { EstadoNegocioComponent } from './estado-negocio.component';
 })
 export class PieComponent {
   protected readonly n = inject(NegocioService);
+  protected readonly consentimiento = inject(ConsentimientoService);
   protected readonly c = this.n.cliente;
+  private readonly cartas = inject(CartaService);
+  protected readonly club = computed(() => this.cartas.carta().club);
+  /** Sin la configuración de Firebase no hay cuentas: el enlace no se muestra. */
+  protected readonly cuentas = firebaseListo;
   readonly anio = new Date().getFullYear();
   readonly enlaces = [
     { href: '#menu', texto: 'Menú' },

@@ -74,8 +74,9 @@ export type HorarioSemana = [
 ];
 
 /**
- * Promoción del mes. Para cambiarla: guarda el afiche en recursos/promos/<id>.png, corre `npm run promo`
- * (lo pasa a WebP en public/promos) y cambia estos datos. Sin `promocion`, o fuera de las fechas, no sale nada.
+ * Promoción o banner de temporada. Se crean y cambian desde el panel (Admin → Promos y banners), con el afiche
+ * subido desde ahí. La de la config (`promocion`) es la primera que se carga en Firestore. Fuera de sus fechas,
+ * o apagada, no sale nada.
  */
 export interface Promocion {
   /** Nombre del archivo del afiche y lo que recuerda el navegador para no repetir la ventana ('halloween-2026'). */
@@ -98,10 +99,56 @@ export interface Promocion {
   cantidad?: number;
   /** Fechas 'AAAA-MM-DD' en hora de Colombia, ambas incluidas. */
   vigencia: { desde: string; hasta: string };
-  /** Afiche en /public (lo genera `npm run promo`). `alt` describe la imagen; los datos van en los textos de arriba. */
+  /**
+   * Afiche: ruta en /public (lo genera `npm run promo`) o dirección de Storage (subido desde el panel).
+   * `alt` describe la imagen; los datos van en los textos de arriba.
+   */
   afiche: { src: string; ancho: number; alto: number; pequena?: { src: string; ancho: number }; alt: string };
   /** Mensaje del botón de WhatsApp. */
   mensajeWhatsApp?: string;
+  /** false: guardada pero apagada (no sale aunque esté en fechas). Sin definir cuenta como encendida. */
+  activa?: boolean;
+}
+
+/**
+ * Club Rootfire: registrarse es opcional. Quien se registra puede tener un descuento y una tarjeta de sellos.
+ * Lo cambia el admin en el panel (Admin → Club); estos son los valores con los que arranca.
+ */
+export interface AjustesClub {
+  /** Apagado: la página no invita a registrarse ni aplica beneficios (las cuentas que ya existen siguen ahí). */
+  activo: boolean;
+  nombre: string;
+  /** Descuento para clientes registrados, sobre los productos que no son promo. */
+  descuento: { activo: boolean; porcentaje: number; soloPrimerPedido: boolean; /** Pedido mínimo en pesos (0: sin mínimo). */ minimo: number };
+  /** Tarjeta de sellos: un sello por pedido entregado (lo marca el admin); al juntar `meta`, el premio. */
+  sellos: { activo: boolean; meta: number; premio: string };
+}
+
+/** Datos del responsable del tratamiento de datos (políticas y términos). */
+export interface DatosLegales {
+  /** Razón social o nombre del titular. Sin ella se usa el nombre del negocio. */
+  razonSocial?: string;
+  /** NIT o cédula del responsable. */
+  nit?: string;
+  /** Correo para consultas y reclamos sobre datos personales. */
+  correo?: string;
+  /** Fecha desde la que rigen la política y los términos (texto: '22 de octubre de 2026'). */
+  vigenteDesde: string;
+  /**
+   * Versión de la política que acepta quien se registra ('2026-10-22'). Si cambian las finalidades, súbela:
+   * queda guardada con cada autorización como prueba de qué se aceptó.
+   */
+  version: string;
+}
+
+/** Configuración web de Firebase (no es secreta: la protegen las reglas). Firebase → Configuración del proyecto → Tus apps. */
+export interface ConfigFirebase {
+  projectId: string;
+  apiKey?: string;
+  authDomain?: string;
+  storageBucket?: string;
+  messagingSenderId?: string;
+  appId?: string;
 }
 
 export type RedSocial = 'instagram' | 'facebook' | 'tiktok' | 'whatsapp';
@@ -169,8 +216,16 @@ export interface ConfigCliente {
    * Lista vacía: los festivos se cierra. Sin definir: un festivo se atiende como cualquier otro día de la semana.
    */
   horarioFestivos?: Turno[];
-  /** Promoción del mes: sale en una ventana al abrir la página mientras esté vigente. */
+  /**
+   * Promoción con la que arranca la página. Cuando el admin carga la carta en Firestore, las promos pasan a
+   * cambiarse desde el panel y esta ya no se usa.
+   */
   promocion?: Promocion;
+  /** Valores iniciales del Club (el admin los cambia en el panel). */
+  club: AjustesClub;
+  legal: DatosLegales;
+  /** Cuenta dueña del panel. Debe coincidir con esCorreoAdmin() en firestore.rules y storage.rules. */
+  adminEmail: string;
   contacto: {
     /**
      * Botón de WhatsApp. Con `pedidos`, la página deja armar el pedido y lo envía como mensaje de WhatsApp
@@ -182,7 +237,10 @@ export interface ConfigCliente {
   redes: EnlaceRed[];
   /** Firma del desarrollador en el pie: "Diseño y desarrollo · ProjectRyann". */
   firma: { etiqueta: string; nombre: string; url?: string };
-  /** Solo el id del proyecto (sin llaves): para Hosting y la futura migración del menú a Firestore. */
-  firebase?: { projectId: string };
+  /**
+   * Proyecto de Firebase. Con solo `projectId` la página funciona con el menú de config/menu.ts; con la
+   * configuración web completa (`apiKey`, `appId`…) se encienden la carta editable, el Club y el panel.
+   */
+  firebase: ConfigFirebase;
   tema: TemaCliente;
 }

@@ -1,6 +1,6 @@
 import type { Promocion } from '../config/modelo';
 import type { Plato } from '../menu/menu.model';
-import { type LineaGuardada, MAXIMO, ahorroConPromo, cambiarPorPromo, claveDe, mensajePedido, resolver, sumar, totalDe, unidadesDe } from './pedido';
+import { type LineaGuardada, MAXIMO, ahorroConPromo, baseDescontable, cambiarPorPromo, claveDe, mensajePedido, resolver, sumar, totalDe, unidadesDe } from './pedido';
 
 const plato = (id: string, nombre: string, precio: number, precioCombo?: number, estado?: Plato['estado']): Plato => ({
   id, nombre, precio, precioCombo, estado, categoriaId: 'x', descripcion: '', ingredientes: [], orden: 1,
@@ -88,6 +88,28 @@ describe('pedido: mensaje de WhatsApp', () => {
     expect(mensaje).toContain('Entrega: Paso a recogerlo en el local');
     expect(mensaje).not.toContain('Nota');
     expect(mensaje).not.toContain(' ');
+  });
+});
+
+describe('pedido: descuentos y Club', () => {
+  const lineas = resolver([{ tipo: 'promo', promoId: PROMO.id, cantidad: 1 }, { tipo: 'plato', platoId: 'la-casual', variante: 'sola', cantidad: 2 }], buscar, LADOS, PROMO);
+
+  it('el descuento no aplica sobre las promos', () => {
+    expect(baseDescontable(lineas)).toBe(30000);
+  });
+
+  it('con descuento el mensaje dice subtotal, descuento y el total a pagar', () => {
+    const mensaje = mensajePedido(lineas, 'recoger', '', undefined, { descuento: { tipo: 'cupon', concepto: 'Cupón HALLOWEEN', valor: 3000, cupon: 'HALLOWEEN' } });
+    expect(mensaje).toContain('Subtotal: $ 88.900\nCupón HALLOWEEN: -$ 3.000\n*Total: $ 85.900*');
+  });
+
+  it('con cuenta del Club dice quién pide, su dirección (a domicilio) y el premio que canjea', () => {
+    const cliente = { nombre: 'Ana Pérez', celular: '300 123 4567', direccion: 'Calle 5 # 10-20, Centro' };
+    const mensaje = mensajePedido(lineas, 'domicilio', '', undefined, { cliente, premio: 'Una La Clásica' });
+    expect(mensaje).toContain('• Premio del Club: Una La Clásica');
+    expect(mensaje).toContain('Dirección: Calle 5 # 10-20, Centro');
+    expect(mensaje.endsWith('Cliente del Club: Ana Pérez · 300 123 4567')).toBeTrue();
+    expect(mensajePedido(lineas, 'recoger', '', undefined, { cliente })).not.toContain('Dirección');
   });
 });
 

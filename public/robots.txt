@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /cuenta
 
 Sitemap: https://rootfire-burgers.web.app/sitemap.xml

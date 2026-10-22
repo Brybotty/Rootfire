@@ -187,6 +187,55 @@ button {
   .enlace-toque {
     @apply inline-flex min-h-11 items-center gap-2;
   }
+
+  /* Interruptor: va justo después de un <input type="checkbox" class="peer sr-only"> */
+  .interruptor {
+    @apply relative h-7 w-12 shrink-0 rounded-full border border-papel-100/20 bg-fondo-700 transition-colors duration-200
+      peer-checked:border-destello-400 peer-checked:bg-destello-400 peer-focus-visible:outline peer-focus-visible:outline-2
+      peer-focus-visible:outline-offset-2 peer-focus-visible:outline-destello-400;
+  }
+  .interruptor::after {
+    content: '';
+    @apply absolute left-1 top-1 h-[1.125rem] w-[1.125rem] rounded-full bg-papel-100 shadow transition-transform duration-200;
+  }
+  .peer:checked + .interruptor::after {
+    @apply translate-x-5 bg-fondo-950;
+  }
+
+  /* Campos de formulario (Club y panel) */
+  .campo {
+    @apply block w-full rounded-2xl border border-papel-100/15 bg-fondo-950/50 px-4 py-3 text-[15px] text-papel-50 transition
+      placeholder:text-papel-400 focus:border-destello-400/70 focus:outline-none focus:ring-2 focus:ring-destello-400/30
+      disabled:opacity-60;
+  }
+  .campo-rotulo {
+    @apply mb-1.5 block text-xs font-extrabold uppercase tracking-[0.16em] text-papel-300;
+  }
+
+  /* Textos largos: políticas y términos */
+  .texto-legal h2 {
+    @apply mb-4 mt-12 scroll-mt-24 font-display text-3xl font-extrabold uppercase leading-none text-papel-50;
+  }
+  .texto-legal h3 {
+    @apply mb-2 mt-6 font-bold text-papel-50;
+  }
+  .texto-legal p,
+  .texto-legal li {
+    @apply leading-relaxed text-papel-200;
+  }
+  .texto-legal p + p {
+    @apply mt-3;
+  }
+  .texto-legal ul {
+    @apply mt-3 list-disc space-y-2 pl-5 marker:text-secundario-400;
+  }
+  .texto-legal strong {
+    @apply text-papel-50;
+  }
+  .texto-legal a,
+  .texto-legal .enlace {
+    @apply font-semibold text-papel-50 underline underline-offset-4 hover:text-destello-300;
+  }
 }
 
 @layer utilities {

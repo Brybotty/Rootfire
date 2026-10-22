@@ -3,7 +3,8 @@ import type { Plato } from '../menu/menu.model';
 import { formatoPrecio } from '../menu/precio';
 
 /**
- * Pedido por WhatsApp. La página solo arma el mensaje: no cobra, no guarda datos de nadie y no hay cuentas.
+ * Pedido por WhatsApp. La página arma el mensaje y no cobra. Sin cuenta no guarda datos de nadie; con cuenta del
+ * Club el pedido queda además en Firestore (club/sesion.ts) para sus sellos y para el panel.
  * Lo que se guarda en el navegador son ids (plato, variante, cantidad): los nombres y precios salen siempre del
  * menú vigente, así un pedido guardado nunca muestra un precio viejo.
  */
@@ -84,23 +85,59 @@ export function unidadesDe(lineas: Linea[]): number {
   return lineas.reduce((suma, l) => suma + l.cantidad, 0);
 }
 
+/** Lo que admite descuento (cupón o Club): todo menos las promos, que ya vienen con precio especial. */
+export function baseDescontable(lineas: Linea[]): number {
+  return totalDe(lineas.filter((l) => l.guardada.tipo !== 'promo'));
+}
+
+/** Descuento aplicado al pedido (uno solo: el cupón reemplaza al del Club). */
+export interface Descuento {
+  tipo: 'club' | 'cupon';
+  /** 'Descuento del Club Rootfire (10 %)', 'Cupón HALLOWEEN10' */
+  concepto: string;
+  valor: number;
+  cupon?: string;
+}
+
+/** Lo que se agrega al mensaje cuando hay descuento o quien pide tiene cuenta del Club. */
+export interface ExtrasPedido {
+  descuento?: Descuento | null;
+  /** Quien pide, con su cuenta del Club: así el local sabe a quién sumarle el sello. */
+  cliente?: { nombre: string; celular: string; direccion?: string } | null;
+  /** Premio de la tarjeta de sellos que canjea en este pedido. */
+  premio?: string | null;
+}
+
 /** '$ 28.000' con espacio normal: el de no separación de formatoPrecio se ve raro en algunos teclados de WhatsApp. */
 const precio = (valor: number) => formatoPrecio(valor).replace(/ /g, ' ');
 
 const ENTREGAS: Record<Entrega, string> = { domicilio: 'A domicilio', recoger: 'Paso a recogerlo en el local' };
 
-/** El mensaje de WhatsApp: una línea por producto, el total (en negrilla de WhatsApp), la entrega y la nota. */
-export function mensajePedido(lineas: Linea[], entrega: Entrega, nota = '', saludo = 'Hola, Rootfire.'): string {
+/** Una nota de una sola línea, sin espacios de más. */
+export const notaLimpia = (nota: string) => nota.replace(/\s+/g, ' ').trim();
+
+/**
+ * El mensaje de WhatsApp: una línea por producto, el total (en negrilla de WhatsApp), la entrega y la nota. Con
+ * descuento van también el subtotal y el descuento; con cuenta del Club, quién pide y el premio que canjea.
+ */
+export function mensajePedido(lineas: Linea[], entrega: Entrega, nota = '', saludo = 'Hola, Rootfire.', extras: ExtrasPedido = {}): string {
   const productos = lineas.map((l) => `• ${l.cantidad} x ${l.nombre}${l.detalle ? ` (${l.detalle})` : ''}: ${precio(l.subtotal)}`);
-  const limpia = nota.replace(/\s+/g, ' ').trim();
+  const limpia = notaLimpia(nota);
+  const total = totalDe(lineas);
+  const { descuento, cliente, premio } = extras;
+  const direccion = entrega === 'domicilio' ? cliente?.direccion?.trim() : '';
   return [
     `${saludo} Quiero hacer este pedido:`,
     '',
     ...productos,
+    ...(premio ? [`• Premio del Club: ${premio}`] : []),
     '',
-    `*Total: ${precio(totalDe(lineas))}*`,
+    ...(descuento ? [`Subtotal: ${precio(total)}`, `${descuento.concepto}: -${precio(descuento.valor)}`] : []),
+    `*Total: ${precio(total - (descuento?.valor ?? 0))}*`,
     `Entrega: ${ENTREGAS[entrega]}`,
+    ...(direccion ? [`Dirección: ${direccion}`] : []),
     ...(limpia ? [`Nota: ${limpia}`] : []),
+    ...(cliente ? ['', `Cliente del Club: ${cliente.nombre} · ${cliente.celular}`] : []),
   ].join('\n');
 }
 
