@@ -3,4 +3,4 @@ Allow: /
 Disallow: /admin
 Disallow: /cuenta
 
-Sitemap: https://rootfire-burgers.web.app/sitemap.xml
+Sitemap: https://rootfireburguers.com/sitemap.xml

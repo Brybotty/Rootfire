@@ -1,16 +1,19 @@
 // Revisión automática del build con el Chrome del equipo (puppeteer-core).
-// Sirve dist/ con los mismos encabezados de firebase.json (CSP incluida) y revisa en 360, 390, 414, 768,
-// 1024 y 1440 px: scroll horizontal, errores de consola, zonas táctiles, letra mínima, rótulos de las
-// hamburguesas, búsqueda, filtros, barra de categorías, detalle del plato (con "atrás" y enlace compartido),
-// horario con festivos, promo del mes (ventana, sello en su tarjeta y enlace ?promo), pedido por WhatsApp,
-// sin conexión e impresión.
+// Sirve dist/ con los mismos encabezados del .htaccess de Hostinger (scripts/lib/encabezados.mjs, CSP incluida) y
+// revisa en 360, 390, 414, 768, 1024 y 1440 px: scroll horizontal, errores de consola, zonas táctiles, letra mínima,
+// rótulos de las hamburguesas, búsqueda, filtros, barra de categorías, detalle del plato (con "atrás" y enlace
+// compartido), horario con festivos, promo del mes (ventana, sello en su tarjeta y enlace ?promo), pedido por
+// WhatsApp, sin conexión e impresión.
 // Uso: npm run build && npm run revisar      (capturas y reporte en revision/)
 //      PUERTO=4302 npm run revisar           (si 4301 está ocupado)
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+//      URL_BASE=http://127.0.0.1:8088 npm run revisar    (contra otro servidor: el Apache local con el .htaccess de
+//                                                         verdad, o el sitio publicado)
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { extname, join, resolve } from 'node:path';
 import { abrirChrome } from './lib/chrome.mjs';
 import { cargarConfig } from './lib/config.mjs';
+import { csp, encabezadosDe, esPagina } from './lib/encabezados.mjs';
 
 const { CLIENTE, MENU } = await cargarConfig();
 const { ROTULOS } = await import('../src/app/marca/nombres.ts');
@@ -30,7 +33,8 @@ const DIST = join(RAIZ, 'dist/rootfire-burgers/browser');
 const SALIDA = join(RAIZ, 'revision');
 const PUERTO = Number(process.env.PUERTO ?? 4301);
 const ANCHOS = [360, 390, 414, 768, 1024, 1440];
-const BASE = `http://127.0.0.1:${PUERTO}`;
+const EXTERNO = !!process.env.URL_BASE;
+const BASE = (process.env.URL_BASE ?? `http://127.0.0.1:${PUERTO}`).replace(/\/+$/, '');
 
 if (!existsSync(join(DIST, 'index.html'))) {
   console.error('No hay build. Corre primero: npm run build');
@@ -39,32 +43,42 @@ if (!existsSync(join(DIST, 'index.html'))) {
 rmSync(SALIDA, { recursive: true, force: true });
 mkdirSync(SALIDA, { recursive: true });
 
-// ——— Servidor estático con los encabezados de Firebase Hosting ———
+// ——— Servidor estático con los encabezados del sitio (los mismos del .htaccess) ———
 const TIPOS = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json',
   '.webmanifest': 'application/manifest+json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg',
   '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.txt': 'text/plain', '.xml': 'application/xml', '.webp': 'image/webp',
 };
-const hosting = JSON.parse(readFileSync(join(RAIZ, 'firebase.json'), 'utf8')).hosting;
-const encabezados = Object.fromEntries(
-  hosting.headers
-    // Los de todas las páginas: '**' y la regla que deja fuera /__/ (las páginas de Firebase para entrar con Google).
-    .filter((h) => h.source === '**' || (h.regex && new RegExp(h.regex).test('/')))
-    .flatMap((h) => h.headers)
-    .map(({ key, value }) => [key, key === 'Content-Security-Policy' ? value.replace(/;\s*upgrade-insecure-requests/, '') : value])
-    .filter(([key]) => key !== 'Strict-Transport-Security'),
-);
-const servidor = createServer((req, res) => {
-  const ruta = decodeURIComponent(new URL(req.url, BASE).pathname);
-  let archivo = join(DIST, ruta);
-  if (!archivo.startsWith(DIST) || !existsSync(archivo) || ruta.endsWith('/')) archivo = join(DIST, 'index.html');
-  res.writeHead(200, { 'Content-Type': TIPOS[extname(archivo)] ?? 'application/octet-stream', ...encabezados });
-  res.end(readFileSync(archivo));
-});
-await new Promise((ok, falla) => servidor.once('error', falla).listen(PUERTO, '127.0.0.1', ok)).catch((e) => {
-  console.error(`El puerto ${PUERTO} está ocupado (${e.code}). Usa PUERTO=otro npm run revisar.`);
-  process.exit(1);
-});
+
+/** Como el .htaccess: un archivo que existe sale tal cual, una ruta sin extensión es una página y lo demás da 404. */
+const servidor = EXTERNO
+  ? null
+  : createServer((req, res) => {
+      const ruta = decodeURIComponent(new URL(req.url, BASE).pathname);
+      const archivo = join(DIST, ruta);
+      if (/(^|\/)\.(?!well-known\/)/.test(ruta)) {
+        res.writeHead(403, { 'Content-Type': 'text/plain' });
+        return res.end('Prohibido');
+      }
+      const existe = archivo.startsWith(DIST) && existsSync(archivo) && statSync(archivo).isFile();
+      if (!existe && !esPagina(ruta)) {
+        res.writeHead(404, { 'Content-Type': 'text/plain' });
+        return res.end('No existe');
+      }
+      const encabezados = encabezadosDe(existe ? ruta : '/', CLIENTE);
+      // En local no hay HTTPS.
+      delete encabezados['Strict-Transport-Security'];
+      if (encabezados['Content-Security-Policy']) encabezados['Content-Security-Policy'] = encabezados['Content-Security-Policy'].replace(/;\s*upgrade-insecure-requests/, '');
+      const servido = existe ? archivo : join(DIST, 'index.html');
+      res.writeHead(200, { 'Content-Type': TIPOS[extname(servido)] ?? 'application/octet-stream', ...encabezados });
+      res.end(readFileSync(servido));
+    });
+if (servidor) {
+  await new Promise((ok, falla) => servidor.once('error', falla).listen(PUERTO, '127.0.0.1', ok)).catch((e) => {
+    console.error(`El puerto ${PUERTO} está ocupado (${e.code}). Usa PUERTO=otro npm run revisar.`);
+    process.exit(1);
+  });
+}
 
 // ——— Utilidades ———
 const reporte = { fecha: new Date().toISOString(), anchos: {}, pruebas: [], consola: [] };
@@ -128,6 +142,45 @@ async function recorrer(pagina) {
       new Promise((r) => setTimeout(r, 6000)),
     ]);
   });
+}
+
+// ——— Encabezados por ruta: lo que responde de verdad el servidor (el local, el Apache con el .htaccess o el sitio) ———
+{
+  console.log('\nEncabezados');
+  const leer = async (ruta) => {
+    const r = await fetch(BASE + ruta, { redirect: 'manual' });
+    return { estado: r.status, h: (k) => r.headers.get(k) ?? '', tipo: r.headers.get('content-type') ?? '', texto: await r.text() };
+  };
+  // En local (http) no va upgrade-insecure-requests; en el sitio sí.
+  const sinUpgrade = (v) => v.replace(/;\s*upgrade-insecure-requests/, '');
+  const paginas = ['/', '/index.html', '/cuenta', '/club', '/admin', '/admin/', '/politica-de-datos', '/terminos', '/?plato=root-burger'];
+  const malas = [];
+  for (const ruta of paginas) {
+    const r = await leer(ruta);
+    const ok = r.estado === 200 && r.tipo.startsWith('text/html') && r.h('cross-origin-opener-policy') && r.h('cache-control') === 'no-cache'
+      && sinUpgrade(r.h('content-security-policy')) === sinUpgrade(csp(CLIENTE));
+    if (!ok) malas.push(`${ruta} (${r.estado}, csp: ${!!r.h('content-security-policy')}, caché: ${r.h('cache-control') || '—'})`);
+  }
+  prueba('todas las páginas: 200, CSP, COOP y sin caché', malas.length === 0, malas.join(', '));
+  const trabajador = await leer('/ngsw-worker.js');
+  prueba(
+    'el service worker va sin CSP y sin caché',
+    trabajador.estado === 200 && !trabajador.h('content-security-policy') && trabajador.h('cache-control') === 'no-cache',
+    JSON.stringify({ estado: trabajador.estado, csp: !!trabajador.h('content-security-policy'), cache: trabajador.h('cache-control') }),
+  );
+  const principal = (await leer('/')).texto.match(/main-[A-Z0-9]{8}\.js/)?.[0];
+  const js = await leer(`/${principal}`);
+  prueba('los JS con hash se guardan un año', js.h('cache-control').includes('immutable') && /javascript/.test(js.tipo), `${principal}: ${js.h('cache-control')} · ${js.tipo}`);
+  const manifiesto = await leer('/manifest.webmanifest');
+  prueba('el manifiesto va como application/manifest+json', manifiesto.tipo.startsWith('application/manifest+json'), manifiesto.tipo);
+  const falta = await leer('/no-existe-ABCD1234.js');
+  prueba('un archivo que no existe da 404 (no la página)', falta.estado === 404, String(falta.estado));
+  const ocultos = [];
+  for (const ruta of ['/.htaccess', '/.git/config', '/.env']) if ((await leer(ruta)).estado === 200) ocultos.push(ruta);
+  prueba('los archivos ocultos no se sirven', ocultos.length === 0, ocultos.join(', '));
+  const imagen = await leer('/favicon.svg');
+  const faltan = ['x-content-type-options', 'x-frame-options', 'referrer-policy', 'permissions-policy'].filter((k) => !imagen.h(k));
+  prueba('nosniff, X-Frame-Options, Referrer-Policy y Permissions-Policy también en los archivos', faltan.length === 0, faltan.join(', '));
 }
 
 const navegador = await abrirChrome();
@@ -401,6 +454,8 @@ for (const ancho of [390, 1440]) {
 // ——— Aviso de cookies: sale a quien llega por primera vez y "Entendido" lo cierra; el mapa carga igual ———
 {
   const pagina = await abrir(navegador, 390, { cookies: false });
+  // Sale 1,2 s después de pintar la página (aviso-cookies.component.ts).
+  await pagina.waitForSelector('.aviso-cookies', { timeout: 5000 }).catch(() => {});
   await pagina.evaluate(() => document.getElementById('visitanos').scrollIntoView({ behavior: 'instant' }));
   await pagina.waitForSelector('#visitanos iframe', { timeout: 15000 }).catch(() => {});
   const antes = await pagina.evaluate(() => ({ aviso: !!document.querySelector('.aviso-cookies'), mapa: !!document.querySelector('#visitanos iframe') }));
@@ -689,6 +744,26 @@ if (PEDIDOS) {
     .catch(() => false);
   prueba('el service worker se instala', listo);
   if (listo) {
+    // El service worker pasa por fetch() todo lo que pide la página, también lo de otros dominios: con una CSP propia
+    // (la del 2026-10-09 traía connect-src 'self') bloqueaba la ventana de Google y la carta de Firestore.
+    const deGoogle = await pagina.evaluate(async () => {
+      const controlado = !!navigator.serviceWorker.controller;
+      const script = (await navigator.serviceWorker.getRegistration())?.active?.scriptURL ?? '';
+      const cargo = await new Promise((listo) => {
+        const s = document.createElement('script');
+        s.src = 'https://apis.google.com/js/api.js';
+        s.onload = () => listo(typeof window.gapi === 'object');
+        s.onerror = () => listo(false);
+        document.head.append(s);
+        setTimeout(() => listo(false), 15000);
+      });
+      return { controlado, script: script.replace(location.origin, ''), cargo };
+    });
+    prueba(
+      'service worker: el script de Google (ventana para entrar) pasa por él sin bloqueo',
+      deGoogle.controlado && deGoogle.cargo && deGoogle.script.includes('?v='),
+      JSON.stringify(deGoogle),
+    );
     // Espera a que el service worker guarde los archivos de la app.
     for (let i = 0; i < 30; i++) {
       const guardados = await pagina.evaluate(async () => (await caches.keys()).some((k) => k.includes(':assets:app:cache')));
@@ -721,7 +796,7 @@ if (PEDIDOS) {
 }
 
 await navegador.close();
-servidor.close();
+servidor?.close();
 
 const errores = reporte.consola.filter((l) => !l.includes('requestfailed: https://www.google.com'));
 prueba('consola sin errores ni avisos', errores.length === 0, errores.slice(0, 6).join(' | '));

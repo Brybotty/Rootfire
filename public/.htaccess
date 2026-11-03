@@ -1,0 +1,68 @@
+# Generado por scripts/preparar.mjs (scripts/lib/encabezados.mjs y la config del cliente). No editar a mano.
+# Hostinger: va en public_html junto con el resto de dist/rootfire-burgers/browser.
+
+DirectoryIndex index.html
+Options -Indexes
+AddDefaultCharset utf-8
+
+<IfModule mod_mime.c>
+  AddType text/javascript .js .mjs
+  AddType application/manifest+json .webmanifest
+  AddType image/webp .webp
+  AddType image/svg+xml .svg
+  AddType font/woff2 .woff2
+  AddCharset utf-8 .js .css .json .webmanifest .svg .txt .xml
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Siempre https://rootfireburguers.com, sin www.
+  RewriteCond %{HTTP_HOST} ^(www\.)?rootfireburguers\.com$ [NC]
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://rootfireburguers.com%{REQUEST_URI} [R=301,L,NE]
+  RewriteCond %{HTTP_HOST} ^www\.rootfireburguers\.com$ [NC]
+  RewriteRule ^ https://rootfireburguers.com%{REQUEST_URI} [R=301,L,NE]
+
+  # Nada de archivos ocultos (.git, .env…), salvo .well-known (certificados).
+  RewriteRule (^|/)\.(?!well-known/) - [F,L]
+
+  # Las páginas (rutas sin extensión) las arma la app. Un archivo que no existe da 404, no la página.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_URI} !\.[a-zA-Z0-9]+$
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()"
+  Header always set Strict-Transport-Security "max-age=31536000"
+
+  # Caché (si dos bloques calzan, gana el de más abajo).
+  <FilesMatch "\.(jpe?g|png|webp|avif|svg|ico|txt|xml)$">
+    Header set Cache-Control "public, max-age=86400"
+  </FilesMatch>
+  <FilesMatch "\.woff2$">
+    Header set Cache-Control "public, max-age=2592000"
+  </FilesMatch>
+  <FilesMatch "-[A-Z0-9]{8}\.(js|css)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "^(ngsw-worker\.js|safety-worker\.js|worker-basic\.min\.js|ngsw\.json|manifest\.webmanifest)$">
+    Header set Cache-Control "no-cache"
+  </FilesMatch>
+
+  # Las páginas: todas salen de index.html.
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache"
+    Header set Cross-Origin-Opener-Policy "same-origin-allow-popups"
+    Header set Content-Security-Policy "default-src 'self'; script-src 'self' https://apis.google.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https://firebasestorage.googleapis.com; font-src 'self'; connect-src 'self' https://*.googleapis.com; frame-src 'self' https://www.google.com https://maps.google.com https://rootfire-burgers.firebaseapp.com; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'; upgrade-insecure-requests"
+  </FilesMatch>
+</IfModule>
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/manifest+json image/svg+xml text/plain application/xml
+</IfModule>

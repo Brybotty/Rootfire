@@ -23,8 +23,9 @@ export const ROOTFIRE: ConfigCliente = {
   descripcion:
     'Rootfire Burgers en Cali: hamburguesas Angus a domicilio o en el local de Fenalco Kennedy (Calle 49 # 25-06). Jueves a domingo y festivos, de 5:30 a 10:30 p. m.',
   sitio: {
-    // TODO: dominio final. Mientras tanto, el de Firebase Hosting del proyecto (aún sin publicar).
-    url: 'https://rootfire-burgers.web.app',
+    // Dominio propio desde el 2026-11-03 (así, "burguers"; comprado en Hostinger, conectado a Firebase Hosting).
+    // rootfire-burgers.web.app sirve lo mismo, así que los QR impresos antes con esa dirección siguen sirviendo.
+    url: 'https://rootfireburguers.com',
     idioma: 'es-CO',
     cocina: ['Hamburguesas', 'Comida rápida'],
   },
@@ -119,12 +120,18 @@ export const ROOTFIRE: ConfigCliente = {
   },
   // La misma cuenta dueña del panel de El Acicale. Debe coincidir con esCorreoAdmin() en firestore.rules y storage.rules.
   adminEmail: 'ortizgonzalesbryanalexander1@gmail.com',
-  // TODO: configuración web (Firebase → Configuración del proyecto → Tus apps → app web): apiKey, appId y
-  // messagingSenderId. Sin `apiKey` la página sigue con el menú de config/menu.ts y no hay Club ni panel.
-  // authDomain es el mismo dominio de Hosting: así la ventana de Google abre desde rootfire-burgers.web.app.
+  // Configuración web de la app "rootfire_burgers" (Firebase → Configuración del proyecto → Tus apps). No es secreta:
+  // viaja en el JavaScript de la página; lo que protege los datos son firestore.rules y storage.rules. Sin `apiKey`
+  // la página sigue con el menú de config/menu.ts y no hay Club ni panel.
+  // authDomain va en el dominio firebaseapp.com del proyecto: es la única dirección de vuelta que el cliente OAuth de
+  // Google trae autorizada de fábrica. Con rootfire-burgers.web.app, Google respondía redirect_uri_mismatch y nadie podía
+  // entrar con Google. Como se entra con ventana emergente (signInWithPopup), el bloqueo de cookies de terceros no lo afecta.
   firebase: {
     projectId: 'rootfire-burgers',
-    authDomain: 'rootfire-burgers.web.app',
+    apiKey: 'AIzaSyDxpqJH6CAs3DsvZRE3cEsQescFjK9BoJ4',
+    appId: '1:830895731461:web:158cb9e0e7d3b9e2d47d6c',
+    messagingSenderId: '830895731461',
+    authDomain: 'rootfire-burgers.firebaseapp.com',
     storageBucket: 'rootfire-burgers.firebasestorage.app',
   },
   tema: {

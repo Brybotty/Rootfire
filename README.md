@@ -17,7 +17,10 @@ npm test             # pruebas unitarias (Karma + Chrome sin ventana)
 npm run test:reglas  # pruebas de firestore.rules y storage.rules en los emuladores (no toca datos reales)
 npm run demo         # el Club y el panel con los emuladores de Firebase y datos de prueba (http://localhost:4201)
 npm run revisar      # después de build: revisión con Puppeteer y capturas en revision/ (puerto 4301; PUERTO=4302 si está ocupado)
+URL_BASE=https://rootfireburguers.com npm run revisar   # la misma revisión contra otro servidor (el sitio o un Apache local)
 npm run safari       # después de build: lo mismo en Safari 16.4 (iPhone); capturas en revision-safari/
+npm run paquete      # solo si se pasa a Hostinger: el zip para public_html, en publicar/
+npm run revisar:sitio  # el sitio publicado: https, certificado, encabezados, caché, archivos idénticos al build, Firebase Auth
 npm run qr           # QR de la dirección final (SVG, PNG y tarjeta de mesa en PDF) en qr/
 npm run qr -- https://midominio.com
 npm run marca        # regenera favicon e íconos (cabecita de la mascota) y la imagen para redes (assets oficiales)
@@ -157,13 +160,14 @@ Para encender todo, en la consola de Firebase del proyecto `rootfire-burgers`:
 1. *Configuración del proyecto → Tus apps → Agregar app web*. Copia `apiKey`, `messagingSenderId` y `appId` a
    `firebase` en `src/app/config/clientes/rootfire.ts` (no son secretos: lo que protege los datos son las reglas).
 2. *Authentication → Método de acceso*: activa **Google** y **Correo electrónico/contraseña**. En *Configuración →
-   Dominios autorizados* deja `rootfire-burgers.web.app` (y el dominio propio cuando lo haya).
+   Dominios autorizados* agrega el dominio propio (`rootfireburguers.com`); sin él no se puede entrar al Club ni al
+   panel desde ahí (`npm run revisar:sitio` lo revisa).
 3. *Firestore Database → Crear base de datos* (modo producción; ubicación cercana, por ejemplo `southamerica-east1`).
 4. *Storage → Comenzar* (pide el plan **Blaze**; con este uso no genera cobros, pero conviene poner una alerta de
    presupuesto). Sin Storage todo funciona menos subir fotos y afiches.
 5. `firebase deploy --only firestore:rules,firestore:indexes,storage` y acepta el permiso que ofrece para que Storage
    lea la lista de admins de Firestore ("Grant the new role?"; sin él solo la cuenta principal sube imágenes).
-6. `npm run build && firebase deploy --only hosting`, entra a `/admin` con la cuenta principal y toca **Publicar
+6. Publica la página (ver *Publicar*), entra a `/admin` con la cuenta principal y toca **Publicar
    cambios**: la carta de los archivos queda en Firestore y desde ahí se edita en el panel.
 
 Para probar antes sin tocar nada real: `npm run demo` (emuladores de Auth, Firestore y Storage con el proyecto
@@ -238,12 +242,50 @@ En el menú solo va Angular (`core`, `common`, `platform-browser`, `service-work
 solo en la cuenta y el panel (y Firebase *lite* para quien tiene sesión del Club). Sin librerías de animación: CSS,
 `IntersectionObserver` y SVG.
 
+## Publicar
+El sitio va en **Firebase Hosting** (gratis con este uso) con el dominio propio **https://rootfireburguers.com** (así,
+"burguers"; comprado en Hostinger, donde siguen sus DNS). `rootfire-burgers.web.app` sirve lo mismo, así que los
+primeros QR impresos siguen funcionando; el canonical apunta al dominio propio.
+
+```bash
+npm run build && firebase deploy --only hosting --project rootfire-burgers
+npm run revisar:sitio
+```
+
+`npm run build` reescribe la sección `hosting` de `firebase.json` desde `scripts/lib/encabezados.mjs` (la misma fuente
+del servidor de `npm run revisar`): las páginas sin punto (`/cuenta`, `/admin`, `/terminos`…) salen de `index.html`, un
+archivo que no existe da 404, y van los encabezados de seguridad y la caché. Todo con `regex` (calza con la ruta
+completa; si dos reglas ponen el mismo encabezado, gana la última). Firebase pone su propio HSTS (un año, con
+`includeSubDomains` y `preload`).
+
+Para probar antes de publicar: `firebase hosting:channel:deploy prueba --expires 1d` (una dirección temporal con el
+motor real) y `npm run revisar:sitio -- <esa dirección>`. El emulador de Hosting no sirve para esto: en Windows no aplica
+ni `headers` ni `rewrites`.
+
+**Dominio (hecho el 2026-11-03):** en Firebase Hosting están `rootfireburguers.com` y `www.rootfireburguers.com` (este
+redirige al sin www). En Hostinger → *Dominios → rootfireburguers.com → DNS* van: `A @ 199.36.158.100`,
+`TXT @ hosting-site=rootfire-burgers` y `CNAME www rootfire-burgers.web.app` (sin el `A @ 2.57.91.91` ni el
+`CNAME www rootfireburguers.com` que traía). El dominio también está en los dominios autorizados de Firebase Auth.
+
+**Si algún día se pasa a Hostinger** (u otro Apache/LiteSpeed): `npm run build` también escribe `public/.htaccess` con lo
+mismo (https sin www, páginas, 404, ocultos bloqueados, encabezados y caché; Firebase no sube archivos ocultos, así que
+hoy no estorba) y `npm run paquete` arma el zip para `public_html`. Se probó en el Apache de XAMPP con
+`npm run revisar:sitio -- http://127.0.0.1:<puerto> --host rootfireburguers.com`. Ojo: Safari/WebKit aplica
+`upgrade-insecure-requests` también en `127.0.0.1`, así que contra un servidor local por http con la CSP la página no
+carga en WebKit.
+
 ## Seguridad
-`firebase.json` deja listo Hosting con `nosniff`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS,
-`Cross-Origin-Opener-Policy` (`same-origin-allow-popups`, para la ventana de Google) y una CSP (`script-src 'self'` más
-`apis.google.com` para entrar con Google, `connect-src` a `*.googleapis.com`, imágenes de Firebase Storage, `frame-src`
-para Google Maps y la ventana de Firebase Auth). La CSP y el COOP no se aplican a `/__/…` (las páginas de Firebase para
-entrar con Google). Si cambia el dominio o el `authDomain`, revisa `frame-src`.
+`firebase.json` (y el `.htaccess` y el servidor de `npm run revisar`, desde la misma fuente: `scripts/lib/encabezados.mjs`) pone
+`nosniff`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, HSTS, `Cross-Origin-Opener-Policy`
+(`same-origin-allow-popups`, para la ventana de Google) y una CSP (`script-src 'self'` más `apis.google.com` para entrar
+con Google, `connect-src` a `*.googleapis.com`, imágenes de Firebase Storage, `frame-src` para Google Maps y la ventana
+de Firebase Auth en el `authDomain`). La CSP y el COOP van **solo en las páginas** (todo lo que sale de `index.html`).
+El service worker va sin CSP, y `/__/…` (las páginas de Firebase para entrar con Google) tampoco la lleva: pasa por `fetch()` todo lo que pide la página (también Google y Firestore) y se queda con
+los encabezados con que se instaló; si algún día necesita otros, sube el `?v=` de `provideServiceWorker` en
+`app.config.ts` para que el navegador lo reinstale. Si cambia el dominio o el `authDomain`, revisa `frame-src`. El `authDomain` es
+`<proyecto>.firebaseapp.com` a propósito: si fuera el dominio de Hosting (`.web.app` o uno propio), habría que agregar
+`https://<ese dominio>/__/auth/handler` a las URI de redireccionamiento del cliente OAuth en Google Cloud; si no, Google
+responde `redirect_uri_mismatch`.
 
 **Reglas** (`firestore.rules` y `storage.rules`, probadas con `npm run test:reglas`: 79 casos de Firestore y 12 de
 Storage; lo que la página hace funciona y cada abuso desde la consola falla):
@@ -256,7 +298,11 @@ Storage; lo que la página hace funciona y cada abuso desde la consola falla):
   tener los sellos de la meta publicada. El admin solo cambia el estado.
 - Storage: solo imágenes WebP o JPEG de menos de 3 MB en `publico/platos` y `publico/promos`.
 
-Caché larga solo para archivos con hash. Proyecto de Firebase: `rootfire-burgers` (`.firebaserc`). **Publicado** en https://rootfire-burgers.web.app (última vez: 2026-10-09) (`npm run build && firebase deploy --only hosting`).
+El CSV de clientes del panel desarma lo que Excel tomaría como fórmula (`src/app/admin/csv.ts`): el nombre y la
+dirección los escribe el cliente.
+
+Caché larga solo para archivos con hash. Proyecto de Firebase: `rootfire-burgers` (`.firebaserc`). Sitio en
+https://rootfireburguers.com (Firebase Hosting con dominio propio, ver *Publicar*).
 No hay llaves en el repositorio: la configuración web de Firebase (que no es secreta) se agrega al activar el Club
 (ver *Activar Firebase*). Antes de publicar cambios en las reglas: `npm run test:reglas`, y
 `firebase deploy --only firestore:rules,firestore:indexes,storage` antes que `--only hosting`.

@@ -352,9 +352,11 @@ button {
 }
 
 /* ——— Entrada del titular ——— */
+/* Desde 0,01 y no desde 0: a la vista es igual, pero Chrome no cuenta como pintado (LCP) lo que tiene opacidad 0, y
+   el titular del inicio se medía hasta 1 s tarde (Lighthouse, 2026-11-03). */
 @keyframes subir-enfocar {
   from {
-    opacity: 0;
+    opacity: 0.01;
     filter: blur(12px);
     transform: translateY(0.35em);
   }
@@ -367,6 +369,17 @@ button {
 .entrada {
   animation: subir-enfocar 1s var(--curva) both;
   animation-delay: var(--retraso, 0ms);
+}
+
+/* El aviso de cookies sube desde abajo, sin desenfoque (ya lleva backdrop-blur: animar los dos pesa en un celular). */
+@keyframes aparecer-abajo {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+}
+.aviso-entrada {
+  animation: aparecer-abajo 0.45s var(--curva) both;
 }
 
 /* ——— Aparición al hacer scroll (directiva appRevelar) ——— */
@@ -813,6 +826,7 @@ html:has(dialog.promo[open]) {
     transition: none;
   }
   .entrada,
+  .aviso-entrada,
   .texto-fuego,
   .resplandor,
   .animar-llama,

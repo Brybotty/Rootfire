@@ -109,9 +109,16 @@ for (const [nombre, equipo] of [['iphone13', devices['iPhone 13']], ['iphone-se'
   await pagina.keyboard.press('Escape');
   await esperar(600);
   await pagina.evaluate(() => window.scrollTo({ top: 0, behavior: 'instant' }));
-  await pagina.evaluate(() => document.querySelector('#inicio button[aria-haspopup="dialog"]').click());
-  await esperar(1500);
-  await pagina.screenshot({ path: join(salida, `${nombre}-11-promo.png`) });
+  // El botón de la promo solo está mientras hay una vigente.
+  const hayPromo = await pagina.evaluate(() => {
+    const boton = document.querySelector('#inicio button[aria-haspopup="dialog"]');
+    boton?.click();
+    return !!boton;
+  });
+  if (hayPromo) {
+    await esperar(1500);
+    await pagina.screenshot({ path: join(salida, `${nombre}-11-promo.png`) });
+  }
   await contexto.close();
 }
 await navegador.close();

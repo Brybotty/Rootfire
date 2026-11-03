@@ -52,3 +52,6 @@ firebase-debug.log
 # Archivos de Illustrator del menú: pesan más de 100 MB (GitHub rechaza archivos de más de 100 MB)
 /recursos/originales/MEN*.ai
 /recursos/originales/*MEN*.ai
+
+# Zip para subir a Hostinger (npm run paquete)
+/publicar

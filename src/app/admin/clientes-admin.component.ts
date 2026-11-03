@@ -13,6 +13,7 @@ import { formatoPrecio } from '../menu/precio';
 import { enlaceWhatsApp, formatoCelular } from '../negocio/contacto';
 import { fechaColombia } from '../negocio/promocion';
 import { CartaAdminService } from './carta-admin.service';
+import { csv } from './csv';
 
 interface ClienteConId extends Cliente {
   uid: string;
@@ -194,9 +195,8 @@ export class ClientesAdminComponent {
     }
   }
 
-  /** CSV para Excel (separado por punto y coma, como lo abre Excel en español). */
+  /** CSV para Excel (ver csv.ts: separado por punto y coma y sin fórmulas). */
   exportar() {
-    const celda = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
     const filas = [
       ['Nombre', 'Celular', 'Correo', 'Cumpleaños (MM-DD)', 'Dirección', 'Barrio', 'Pedidos entregados', 'Sellos', 'Promociones', 'Registro'],
       ...this.visibles().map((c) => [
@@ -212,7 +212,7 @@ export class ClientesAdminComponent {
         this.fecha(c.creadoEn),
       ]),
     ];
-    const archivo = new Blob(['﻿' + filas.map((f) => f.map(celda).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    const archivo = new Blob([csv(filas)], { type: 'text/csv;charset=utf-8' });
     const enlace = document.createElement('a');
     enlace.href = URL.createObjectURL(archivo);
     enlace.download = `clientes-${CLIENTE.id}-${fechaColombia()}.csv`;

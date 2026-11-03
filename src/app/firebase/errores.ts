@@ -38,6 +38,8 @@ export function mensajeDeError(error: unknown): string {
     case 'storage/project-not-found':
       return 'No se pudo subir la imagen: revisa que Storage esté activado en Firebase.';
     default:
+      // El código real queda en la consola: sin él, "Algo salió mal" no dice qué falló.
+      console.warn('Error de Firebase sin mensaje propio:', codigo || error);
       return 'Algo salió mal. Inténtalo otra vez.';
   }
 }

@@ -2,10 +2,13 @@
 //   src/tema.css               colores y fuentes como variables CSS (sin esperar al JavaScript)
 //   src/index.html             título, descripción, Open Graph, precarga de fuentes y JSON-LD (Restaurant + Menu)
 //   public/manifest.webmanifest, public/robots.txt, public/sitemap.xml
+//   firebase.json (hosting)    encabezados de seguridad y caché del sitio (scripts/lib/encabezados.mjs)
+//   public/.htaccess           lo mismo para Hostinger u otro Apache, por si algún día se cambia de hosting
 // Corre solo con `npm start` y `npm run build`. Uso directo: node scripts/preparar.mjs
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { cargarConfig } from './lib/config.mjs';
+import { hostingFirebase, htaccess } from './lib/encabezados.mjs';
 
 const { CLIENTE: c, MENU } = await cargarConfig();
 const { horarioSchema } = await import('../src/app/negocio/horario.ts');
@@ -147,7 +150,10 @@ const bloque = `<!-- preparar:inicio · lo escribe scripts/preparar.mjs desde la
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:image" content="${og}">
   <link rel="preload" href="${t.fuentes.display.archivo}" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="${t.fuentes.texto.archivo}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="${t.fuentes.texto.archivo}" as="font" type="font/woff2" crossorigin>${
+    // La carta de Firestore se pide apenas se pinta la página: la conexión queda lista mientras baja el JavaScript.
+    c.firebase?.apiKey ? '\n  <link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>' : ''
+  }
   <script type="application/ld+json">
 ${jsonLd}
   </script>
@@ -191,6 +197,11 @@ escribir(
   'public/sitemap.xml',
   `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${['/', '/politica-de-datos', '/terminos'].map((ruta) => `  <url><loc>${url}${ruta}</loc></url>`).join('\n')}\n</urlset>\n`,
 );
+
+// ——— Encabezados: firebase.json (el sitio) y .htaccess (por si se cambia de hosting) ———
+const { hosting: _, ...resto } = JSON.parse(readFileSync(raiz('firebase.json'), 'utf8'));
+escribir('firebase.json', `${JSON.stringify({ hosting: hostingFirebase(c), ...resto }, null, 2)}\n`);
+escribir('public/.htaccess', htaccess(c));
 
 const ejemplos = MENU.platos.filter((p) => p.ejemplo).length;
 console.log(`preparar: ${c.nombre} listo (${MENU.platos.length - ejemplos} platos reales en los datos estructurados, ${ejemplos} de ejemplo fuera).`);
